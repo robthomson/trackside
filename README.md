@@ -29,6 +29,7 @@ src/trackside/         -> deployed to SCRIPTS/trackside/ on the radio
   lib/battery.lua      cell count, cell V, %, session minimum
   widget/home.lua      Trackside dashboard
 bin/sensors/          simulator sensor tool
+bin/manual/           builds the setup guide PDF
 docs/
   FEATURES.md          Phase 1 feature spec + status
   RESEARCH.md          how racers use these features, race rules on driver aids
@@ -53,7 +54,9 @@ Run tasks from the VS Code Run and Debug panel:
 
 The simulator board is set in [.vscode/settings.json](.vscode/settings.json) (`VX10`, `FCC`, `nightly26`).
 
-Model setup on the radio: [docs/SETUP.md](docs/SETUP.md).
+**Setup guide (PDF, with screenshots):** [docs/Trackside-Setup-Guide.pdf](docs/Trackside-Setup-Guide.pdf).
+Short text version: [docs/SETUP.md](docs/SETUP.md). Rebuild the PDF with `python bin/manual/build_manual.py`
+(screenshots in `docs/manual/images`, captured from the VX10 simulator).
 
 ### Simulated telemetry
 

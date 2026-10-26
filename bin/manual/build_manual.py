@@ -1,0 +1,359 @@
+"""
+Build the Trackside setup guide PDF.
+
+Screenshots live in docs/manual/images (captured from the FrSky Velox VX10
+simulator). Output: docs/Trackside-Setup-Guide.pdf
+
+Usage:
+    python bin/manual/build_manual.py
+Requires: reportlab (pip install reportlab)
+"""
+
+from datetime import date
+from pathlib import Path
+
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import (
+    Image, KeepTogether, ListFlowable, ListItem, PageBreak, Paragraph,
+    SimpleDocTemplate, Spacer, Table, TableStyle,
+)
+
+REPO = Path(__file__).resolve().parents[2]
+IMG = REPO / "docs" / "manual" / "images"
+OUT = REPO / "docs" / "Trackside-Setup-Guide.pdf"
+VERSION = "0.1.0"
+
+ACCENT = colors.HexColor("#F2A23A")     # Ethos-style amber
+INK = colors.HexColor("#1D232B")
+MUTED = colors.HexColor("#5B6573")
+NOTE_BG = colors.HexColor("#FFF6E8")
+WARN_BG = colors.HexColor("#FDECEA")
+RULE = colors.HexColor("#D9DEE5")
+
+base = getSampleStyleSheet()
+S = {
+    "title": ParagraphStyle("title", parent=base["Title"], fontName="Helvetica-Bold", fontSize=34,
+                            leading=40, textColor=INK, alignment=TA_CENTER, spaceAfter=6),
+    "subtitle": ParagraphStyle("subtitle", parent=base["Normal"], fontName="Helvetica", fontSize=14,
+                               leading=19, textColor=MUTED, alignment=TA_CENTER),
+    "h1": ParagraphStyle("h1", parent=base["Heading1"], fontName="Helvetica-Bold", fontSize=18,
+                         leading=22, textColor=INK, spaceBefore=4, spaceAfter=8, keepWithNext=1),
+    "h2": ParagraphStyle("h2", parent=base["Heading2"], fontName="Helvetica-Bold", fontSize=12.5,
+                         leading=16, textColor=INK, spaceBefore=8, spaceAfter=4, keepWithNext=1),
+    "body": ParagraphStyle("body", parent=base["Normal"], fontName="Helvetica", fontSize=10.5,
+                           leading=15, textColor=INK, spaceAfter=6),
+    "step": ParagraphStyle("step", parent=base["Normal"], fontName="Helvetica", fontSize=10.5,
+                           leading=15, textColor=INK),
+    "caption": ParagraphStyle("caption", parent=base["Normal"], fontName="Helvetica-Oblique",
+                              fontSize=8.5, leading=11, textColor=MUTED, alignment=TA_CENTER,
+                              spaceBefore=3, spaceAfter=10),
+    "cell": ParagraphStyle("cell", parent=base["Normal"], fontName="Helvetica", fontSize=9.5,
+                           leading=13, textColor=INK),
+    "cellb": ParagraphStyle("cellb", parent=base["Normal"], fontName="Helvetica-Bold", fontSize=9.5,
+                            leading=13, textColor=INK),
+}
+
+
+def p(text, style="body"):
+    return Paragraph(text, S[style])
+
+
+def shot(name, caption, width=120 * mm):
+    path = IMG / f"{name}.png"
+    img = Image(str(path), width=width, height=width * 480 / 800)
+    img.hAlign = "CENTER"
+    frame = Table([[img]], colWidths=[width + 2 * mm])
+    frame.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.6, RULE),
+        ("LEFTPADDING", (0, 0), (-1, -1), 1 * mm), ("RIGHTPADDING", (0, 0), (-1, -1), 1 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 1 * mm), ("BOTTOMPADDING", (0, 0), (-1, -1), 1 * mm),
+    ]))
+    return KeepTogether([frame, p(caption, "caption")])
+
+
+def pair(a, ca, b, cb):
+    """Two screenshots side by side."""
+    w = 82 * mm
+    cells = []
+    for name, cap in ((a, ca), (b, cb)):
+        img = Image(str(IMG / f"{name}.png"), width=w, height=w * 480 / 800)
+        cells.append([img, p(cap, "caption")])
+    t = Table([[cells[0], cells[1]]], colWidths=[w + 4 * mm, w + 4 * mm])
+    t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                           ("LEFTPADDING", (0, 0), (-1, -1), 2 * mm),
+                           ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm)]))
+    return t
+
+
+def box(text, kind="note"):
+    bg = NOTE_BG if kind == "note" else WARN_BG
+    edge = ACCENT if kind == "note" else colors.HexColor("#D9483B")
+    t = Table([[p(text, "step")]], colWidths=[170 * mm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), bg),
+        ("LINEBEFORE", (0, 0), (0, -1), 3, edge),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4 * mm), ("RIGHTPADDING", (0, 0), (-1, -1), 4 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 2.5 * mm), ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5 * mm),
+    ]))
+    return KeepTogether([t, Spacer(1, 4 * mm)])
+
+
+def steps(items, start=1):
+    return ListFlowable(
+        [ListItem(p(t, "step"), leftIndent=14, value=start + i) for i, t in enumerate(items)],
+        bulletType="1", bulletFontName="Helvetica-Bold", bulletFontSize=10.5,
+        bulletColor=ACCENT, leftIndent=14, spaceBefore=2, spaceAfter=6,
+    )
+
+
+def table(rows, widths, header=True):
+    data = [[p(c, "cellb" if (header and r == 0) else "cell") for c in row] for r, row in enumerate(rows)]
+    t = Table(data, colWidths=widths, repeatRows=1 if header else 0)
+    style = [
+        ("GRID", (0, 0), (-1, -1), 0.5, RULE),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2.5 * mm), ("RIGHTPADDING", (0, 0), (-1, -1), 2.5 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 1.6 * mm), ("BOTTOMPADDING", (0, 0), (-1, -1), 1.6 * mm),
+    ]
+    if header:
+        style.append(("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EEF1F5")))
+    t.setStyle(TableStyle(style))
+    return KeepTogether([t, Spacer(1, 4 * mm)])
+
+
+def on_page(canvas, doc):
+    canvas.saveState()
+    if doc.page > 1:
+        canvas.setStrokeColor(RULE)
+        canvas.setLineWidth(0.5)
+        canvas.line(20 * mm, 14 * mm, A4[0] - 20 * mm, 14 * mm)
+        canvas.setFont("Helvetica", 8.5)
+        canvas.setFillColor(MUTED)
+        canvas.drawString(20 * mm, 9 * mm, f"Trackside {VERSION}  |  Setup guide for the FrSky Velox VX10")
+        canvas.drawRightString(A4[0] - 20 * mm, 9 * mm, f"Page {doc.page}")
+    canvas.restoreState()
+
+
+def build():
+    story = []
+
+    # --- cover ---------------------------------------------------------------
+    story += [Spacer(1, 38 * mm), p("Trackside", "title"),
+              p("Race dashboard and drive aids<br/>for the FrSky Velox VX10", "subtitle"),
+              Spacer(1, 10 * mm)]
+    story.append(shot("22-dash-throttle", "The Trackside dashboard on a VX10", width=150 * mm))
+    story += [Spacer(1, 6 * mm),
+              p(f"<b>Setup guide</b> &nbsp;|&nbsp; Version {VERSION} &nbsp;|&nbsp; {date.today():%d %B %Y}", "subtitle"),
+              PageBreak()]
+
+    # --- intro ---------------------------------------------------------------
+    story.append(p("Before you start", "h1"))
+    story.append(p("This guide sets up Trackside on a car model, from a fresh model through to the dashboard. "
+                   "It takes about ten minutes. Every screenshot is from the VX10."))
+    story.append(table([
+        ["You need", ""],
+        ["Radio", "FrSky Velox VX10 with Ethos 26.2 or later"],
+        ["Software", f"Trackside {VERSION} (the <b>trackside</b> folder)"],
+        ["Model", "A car model. Section 2 creates one with the Ethos wizard."],
+    ], [35 * mm, 135 * mm]))
+
+    story.append(p("How Trackside connects to your car", "h2"))
+    story.append(p("Trackside adds two items to your radio:"))
+    story.append(table([
+        ["Part", "What it is", "What it does"],
+        ["<b>Throttle Aid</b> and <b>Steer Aid</b>", "Lua sources",
+         "Each outputs a multiplier for one channel. Your mixes keep the normal stick line and "
+         "add one <b>Multiply</b> line with the aid after it."],
+        ["<b>Trackside</b>", "Widget", "The race dashboard. Its Configure page holds all Trackside settings."],
+    ], [40 * mm, 28 * mm, 102 * mm]))
+    story.append(p("Because the stick line stays in place, the car is always driven by your trigger and wheel. "
+                   "The aids only scale them. If Trackside ever stops running, the channel falls back to the plain stick."))
+    story.append(box("<b>About this version.</b> The aids are set up and connected, but in version "
+                     f"{VERSION} they pass the sticks through unchanged. Setting them up now means "
+                     "nothing else needs to change when the aids arrive in an update."))
+    story.append(box("<b>Safety.</b> Make mixer changes on the bench with the car's motor disconnected or the "
+                     "radio's RF output off. Check failsafe still works afterwards.", "warn"))
+    story.append(PageBreak())
+
+    # --- 1 install -----------------------------------------------------------
+    story.append(p("1. Install Trackside", "h1"))
+    story.append(steps([
+        "Connect the VX10 to your computer by USB and choose <b>USB storage</b> on the radio.",
+        "Copy the <b>trackside</b> folder into the radio's <b>SCRIPTS</b> folder, so you have "
+        "<b>SCRIPTS/trackside/main.lua</b>.",
+        "Eject the radio drive safely and unplug it. The radio loads Trackside on its next start.",
+    ]))
+    story.append(box("Your settings are saved in <b>SCRIPTS/trackside.user</b>, a separate folder. "
+                     "Updating Trackside replaces only <b>SCRIPTS/trackside</b>, so your settings are kept."))
+
+    # --- 2 model ---------------------------------------------------------------
+    story.append(p("2. Create a car model", "h1"))
+    story.append(p("Skip this if you already have a car model with Steering on CH1 and Throttle on CH2. "
+                   "Otherwise create one with the Ethos wizard: <b>Model &gt; Model select &gt; +</b>."))
+    story.append(steps([
+        "Choose <b>Car</b>.",
+        "Step through the engine, steering and brake pages. The defaults are fine for most cars.",
+        "On the channel page, keep <b>Steering = CH1</b> and <b>Throttle = CH2</b>. The rest of this guide uses these.",
+        "Give the model a name and finish the wizard.",
+    ]))
+    story.append(pair("01-wizard-car", "Choose Car", "02-wizard-channels", "Steering CH1, Throttle CH2"))
+    story.append(PageBreak())
+
+    # --- 3 enable aids ---------------------------------------------------------
+    story.append(p("3. Turn on Throttle Aid and Steer Aid", "h1"))
+    story.append(p("Ethos only runs a Lua source, and only lists it when you pick a mix source, after you turn it "
+                   "on for the model. Do this once per model."))
+    story.append(steps([
+        "Open <b>Model</b> and swipe to the second page.",
+        "Tap <b>Lua</b>.",
+        "Turn <b>Throttle Aid</b> and <b>Steer Aid</b> ON.",
+    ]))
+    story.append(shot("03-model-menu-lua", "Model menu, page 2: the Lua page", width=105 * mm))
+    story.append(pair("04-lua-off", "Both start OFF", "05-lua-on", "Turn both ON"))
+    story.append(PageBreak())
+
+    # --- 4 mixes ---------------------------------------------------------------
+    story.append(p("4. Add the aid mixes", "h1"))
+    story.append(p("The car wizard made two mixes: <b>Steering</b> (CH1) and <b>Throttle</b> (CH2). "
+                   "<b>Leave them exactly as they are.</b> You add one more mix after each."))
+    story.append(box("<b>Don't</b> change the source of the existing Steering or Throttle mix to an aid. "
+                     "The channel would then follow the aid's fixed value instead of your stick, and nothing would move.",
+                     "warn"))
+    story.append(shot("06-mixes-start", "Model > Mixes: the two mixes from the wizard", width=105 * mm))
+
+    story.append(p("4a. Throttle", "h2"))
+    story.append(steps([
+        "In <b>Mixes</b>, tap <b>+</b>, choose <b>Free mix</b>, then <b>Add after: Throttle</b>.",
+        "Optional: set <b>Name</b> to <i>Throttle Aid</i> so it's easy to spot in the list.",
+        "Tap <b>Source</b>, scroll to the <b>Lua</b> category and pick <b>Throttle Aid</b>.",
+        "Set <b>Operation</b> to <b>Multiply</b>.",
+        "Scroll down and set <b>Output</b> to <b>CH2 (Throttle)</b>. A new Free mix starts with "
+        "Output = <b>---</b> and does nothing until you set it.",
+    ]))
+    story.append(pair("07-mix-library", "+ opens the mix library: choose Free mix",
+                      "08-add-after", "Add after: Throttle"))
+    story.append(pair("09-source-lua", "Source: Lua > Throttle Aid",
+                      "10-operation-multiply", "Operation: Multiply"))
+    story.append(shot("11-output-ch2", "Output: CH2. The bar shows the result: throttle 60% gives CH2 60%.",
+                      width=105 * mm))
+    story.append(box("The grey box next to Source shows about <b>1024%</b>. That's Ethos showing the aid on its "
+                     "internal scale, and it's expected. What counts is the channel output."))
+
+    story.append(p("4b. Steering", "h2"))
+    story.append(p("Repeat the same steps with these changes: <b>Add after: Steering</b>, source "
+                   "<b>Lua &gt; Steer Aid</b>, Operation <b>Multiply</b>, Output <b>CH1 (Steering)</b>."))
+    story.append(shot("12-output-ch1", "Steer Aid on CH1: wheel at -40% gives CH1 -40%", width=105 * mm))
+
+    story.append(p("4c. Check the order", "h2"))
+    story.append(p("Each stick mix should be followed by its aid. Use exactly one aid line per channel: "
+                   "a second Multiply line with the same aid applies it twice."))
+    story.append(shot("13-mixes-done", "Finished: Steering then Steer Aid (CH1), Throttle then Throttle Aid (CH2)",
+                      width=105 * mm))
+    story.append(table([
+        ["Channel", "Mix", "Source", "Operation", "Output"],
+        ["CH1", "Steering", "Analogs > Steering (the wheel)", "Add", "CH1"],
+        ["CH1", "Steer Aid", "Lua > Steer Aid", "Multiply", "CH1"],
+        ["CH2", "Throttle", "Analogs > Throttle (the trigger)", "Add", "CH2"],
+        ["CH2", "Throttle Aid", "Lua > Throttle Aid", "Multiply", "CH2"],
+    ], [22 * mm, 28 * mm, 60 * mm, 26 * mm, 34 * mm]))
+    story.append(p("If you need to reverse a channel, do it on the stick mix or in Channels, never on the aid line."))
+    story.append(PageBreak())
+
+    # --- 5 check ---------------------------------------------------------------
+    story.append(p("5. Check the channels", "h1"))
+    story.append(p("Open <b>Model &gt; Channels</b>, then move the wheel and pull the trigger. CH1 should follow the wheel "
+                   "and CH2 the trigger, the same as before you added the aids."))
+    story.append(shot("14-channels-check", "Wheel at 25% and trigger at 50%: CH1 25%, CH2 50%"))
+    story.append(PageBreak())
+
+    # --- 6 dashboard -----------------------------------------------------------
+    story.append(p("6. Add the dashboard", "h1"))
+    story.append(steps([
+        "Tap the <b>Screens</b> icon in the bottom bar (the square with a +).",
+        "Tap <b>+</b> at the top right to add a screen.",
+        "Choose <b>Full screen</b>. Trackside also works in other layouts; in full screen it adds its own header "
+        "with model name, link quality, radio battery and transmit power.",
+        "Tap the empty widget area, then pick <b>Trackside</b> from the widget list.",
+        "Go back to the home screen and swipe to the new screen.",
+    ]))
+    story.append(pair("15-configure-screens", "Screens: tap + to add a screen",
+                      "16-full-screen", "Choose Full screen"))
+    story.append(shot("17-widget-pick", "Pick Trackside from the widget list", width=105 * mm))
+    story.append(PageBreak())
+
+    # --- 7 settings ------------------------------------------------------------
+    story.append(p("7. Trackside settings", "h1"))
+    story.append(p("All settings are on the widget's own <b>Configure</b> page: in <b>Screens</b>, tap the Trackside "
+                   "widget. They're grouped into four panels; tap a panel to open it. Settings are saved for each model "
+                   "when you leave the page."))
+    story.append(pair("18-settings-overview", "The four settings groups",
+                      "19-settings-set", "SET: inputs and directions"))
+    story.append(p("Check these first", "h2"))
+    story.append(table([
+        ["Setting", "Group", "What to set"],
+        ["Throttle Input", "SET", "The control the aids read for throttle. Default: the VX10 trigger (Throttle)."],
+        ["Steering Input", "SET", "The control the aids read for steering. Default: the VX10 wheel (Steering)."],
+        ["Brake Direction", "SET", "Which way the trigger brakes. Pull the brake and watch the dashboard bar: "
+                                    "it should turn red."],
+        ["Battery Type, Cells", "VOLT", "Match your packs (LiPo or LiHV). Cells = Auto detects the cell count."],
+        ["Volt Alarm, Alarm Cell Voltage", "VOLT", "Turn the low-voltage alarm on and choose the per-cell warning level."],
+    ], [42 * mm, 18 * mm, 110 * mm]))
+    story.append(pair("20-settings-drv", "DRV: drive aids (OFF by default)",
+                      "21-settings-volt", "VOLT: battery alarm"))
+    story.append(p("The BRK (brake pulse) and DRV (drive aid) settings are all OFF or gentle by default. "
+                   "Leave them there for now: see <i>About this version</i> on page 2."))
+    story.append(PageBreak())
+
+    # --- 8 dashboard tour ------------------------------------------------------
+    story.append(p("8. Reading the dashboard", "h1"))
+    story.append(pair("22-dash-throttle", "On throttle: the bar fills green to the right",
+                      "23-dash-brake", "On the brake: the bar fills red"))
+    story.append(table([
+        ["Area", "Shows"],
+        ["Header (full screen)", "Model name, link quality (LQ), radio battery (TX) and transmit power (PWR)."],
+        ["PACK", "Car pack voltage, with the detected cell count (for example 2S) in the corner. "
+                 "Green above 50%, amber below 50%, red below 20%."],
+        ["CELL / BATT / MIN", "Voltage per cell, estimated charge left, and the lowest pack voltage this session."],
+        ["CUR / L1 / BEST / LAP", "Lap timing: current lap, last lap, best lap and lap count. "
+                                  "The lap timer arrives in a later version."],
+        ["A T S C D", "Drive aid indicators. Each lights in its own colour while that aid is working."],
+        ["Live bar", "Throttle (green) or brake (red) from the centre line. The small mark below shows the wheel position."],
+    ], [42 * mm, 128 * mm]))
+    story.append(p("Telemetry values show <b>--</b> until the receiver sends them."))
+    story.append(PageBreak())
+
+    # --- 9 troubleshooting -----------------------------------------------------
+    story.append(p("9. Troubleshooting", "h1"))
+    story.append(table([
+        ["Problem", "Check"],
+        ["A channel doesn't move at all",
+         "The stick mix's source was changed to an aid. Set the Steering and Throttle mixes back to "
+         "Analogs &gt; Steering and Analogs &gt; Throttle, and add the aids as separate Multiply lines (section 4)."],
+        ["Throttle or steering moves only a little",
+         "Update Trackside to the latest version. Early test builds scaled the aid output wrongly."],
+        ["The aid mix has no effect",
+         "Set the Free mix's <b>Output</b> to the channel (CH2 or CH1). Also check that Operation is <b>Multiply</b>, not Add."],
+        ["No Lua category when picking a source",
+         "Turn on Throttle Aid and Steer Aid in <b>Model &gt; Lua</b> (section 3). This is needed once per model."],
+        ["Trackside isn't in the widget list",
+         "Check the folder is <b>SCRIPTS/trackside</b> with <b>main.lua</b> inside, then restart the radio."],
+        ["The dashboard shows -- everywhere",
+         "No telemetry yet. Values appear once the receiver is bound and sending telemetry."],
+        ["The bar turns red when I accelerate",
+         "Change <b>Brake Direction</b> in the SET settings."],
+    ], [55 * mm, 115 * mm]))
+
+    doc = SimpleDocTemplate(str(OUT), pagesize=A4, leftMargin=20 * mm, rightMargin=20 * mm,
+                            topMargin=18 * mm, bottomMargin=20 * mm,
+                            title="Trackside Setup Guide", author="Trackside",
+                            subject="Setting up Trackside on the FrSky Velox VX10")
+    doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
+    print(f"Wrote {OUT}")
+
+
+if __name__ == "__main__":
+    build()
