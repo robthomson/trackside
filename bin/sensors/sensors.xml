@@ -1,0 +1,35 @@
+<!--
+  Simulated telemetry for the Trackside sensor tool (bin/sensors/sensors.py).
+  name    = key the Lua side reads (lib/telemetry.lua)
+  type    = range | bool | select
+  jitter  = optional +/- percent noise added on the radio side each read
+-->
+<Sensors>
+    <Group name="Link">
+        <Sensor name="connected" label="Telemetry" type="select" default="1">
+            <Option value="1" label="Connected" />
+            <Option value="0" label="Lost" />
+        </Sensor>
+        <Sensor name="lq" label="Link Quality" type="range" min="0" max="100" default="100" round="true" unit="%" jitter="2" />
+        <Sensor name="snr" label="SNR" type="range" min="-20" max="20" default="9" round="true" unit="dB" jitter="5" />
+        <Sensor name="txpower" label="TX Power" type="select" default="100">
+            <Option value="10" label="10 mW" />
+            <Option value="25" label="25 mW" />
+            <Option value="100" label="100 mW" />
+            <Option value="250" label="250 mW" />
+            <Option value="500" label="500 mW" />
+        </Sensor>
+    </Group>
+
+    <Group name="Battery">
+        <Sensor name="pack" label="Pack Voltage" type="range" min="0" max="26" default="8.4" unit="V" jitter="0.5" />
+        <Sensor name="current" label="Current" type="range" min="0" max="200" default="12" round="true" unit="A" jitter="10" />
+        <Sensor name="used" label="Consumption" type="range" min="0" max="10000" default="0" round="true" unit="mAh" />
+    </Group>
+
+    <Group name="ESC / Motor">
+        <Sensor name="rpm" label="Motor RPM" type="range" min="0" max="80000" default="0" round="true" unit="rpm" jitter="3" />
+        <Sensor name="esc_temp" label="ESC Temp" type="range" min="0" max="120" default="45" round="true" unit="°C" jitter="2" />
+        <Sensor name="motor_temp" label="Motor Temp" type="range" min="0" max="120" default="50" round="true" unit="°C" jitter="2" />
+    </Group>
+</Sensors>

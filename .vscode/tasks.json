@@ -1,0 +1,294 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Deploy & Launch [SIM]",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/scripts/deploy.py"
+      ]
+    },
+    {
+      "label": "Deploy Radio",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/scripts/deploy.py",
+        "--radio"
+      ]
+    },
+    {
+      "label": "Deploy Radio [Fast]",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/scripts/deploy.py",
+        "--fileext",
+        "fast",
+        "--radio"
+      ]
+    },
+    {
+      "label": "Deploy Radio + Serial Debug",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/scripts/deploy.py",
+        "--radio",
+        "--radio-debug"
+      ]
+    },
+    {
+      "label": "Deploy Radio + Serial Debug [Fast]",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/scripts/deploy.py",
+        "--fileext",
+        "fast",
+        "--radio",
+        "--radio-debug"
+      ]
+    },
+    {
+      "label": "Radio: Serial Debug",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/scripts/deploy.py",
+        "--radio",
+        "--connect-only"
+      ]
+    },
+    {
+      "label": "Clear locks",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/scripts/deploy.py",
+        "--clear-lock"
+      ]
+    },
+    {
+      "label": "Simulator: Sensors",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "args": [
+        "${workspaceFolder}/bin/sensors/sensors.py"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Debug Radio Connection",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/scripts/debug_connection.py"
+      ]
+    },
+    {
+      "label": "Debug Radio Connection: Switch To Serial",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/scripts/debug_connection.py",
+        "--switch",
+        "start"
+      ]
+    },
+    {
+      "label": "Debug Radio Connection: Switch To Storage",
+      "type": "shell",
+      "command": "python",
+      "osx": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "windows": {
+        "command": "${command:python.interpreterPath}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/scripts/debug_connection.py",
+        "--switch",
+        "stop"
+      ]
+    },
+    {
+      "label": "ethos.Start",
+      "type": "process",
+      "command": "${command:ethos.start}",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "ethos.SetSimulator",
+      "type": "process",
+      "command": "${command:ethos.setSimulator}",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "ethos.StartChain",
+      "dependsOn": [
+        "ethos.SetSimulator",
+        "ethos.Start"
+      ],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "ethos.OpenControls",
+      "type": "process",
+      "command": "${command:ethos.openControls}",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "ethos.OpenTelemetry",
+      "type": "process",
+      "command": "${command:ethos.openTelemetry}",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    }
+  ]
+}
