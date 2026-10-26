@@ -131,11 +131,11 @@ local boxes = {
     { c = 4, r = 4, w = 2, h = 2, title = "MIN", src = function() return battery.min end, q = 0.01, pattern = "%.2f" },
 
     -- right: laps. CUR shows a bar while the lap switch is held towards a reset.
-    { c = 6, r = 1, w = 6, h = 3, lap = true, title = "CUR", font = FONT_XXL, src = function() return laps.current() end,
+    { c = 6, r = 1, w = 6, h = 3, title = "CUR", font = FONT_XXL, src = function() return laps.current() end,
       q = 0.1, fmt = lapLong, progress = function() return laps.holdFrac end },
-    { c = 6, r = 4, w = 2, h = 2, lap = true, title = "L1", src = function() return laps.last end, q = 0.01, fmt = lapShort },
-    { c = 8, r = 4, w = 2, h = 2, lap = true, title = "BEST", color = bestColor, src = function() return laps.best end, q = 0.01, fmt = lapShort },
-    { c = 10, r = 4, w = 2, h = 2, lap = true, title = "LAP", src = function() return laps.count end, q = 1, pattern = "%d" },
+    { c = 6, r = 4, w = 2, h = 2, title = "L1", src = function() return laps.last end, q = 0.01, fmt = lapShort },
+    { c = 8, r = 4, w = 2, h = 2, title = "BEST", color = bestColor, src = function() return laps.best end, q = 0.01, fmt = lapShort },
+    { c = 10, r = 4, w = 2, h = 2, title = "LAP", src = function() return laps.count end, q = 1, pattern = "%d" },
 
     -- footer: aid letters (or timer) + live scope
     { c = 0, r = 6, w = 6, h = 2, kind = "letters" },
@@ -421,7 +421,8 @@ local function create()
     return { textAt = -math.huge, scopeAt = -math.huge, themeAt = os.clock(),
              thrKey = false, steerKey = false, flagKey = false,
              visible = false, slidingUntil = 0, full = true, pending = {},
-             lapView = false, lapViewKey = false, touchX = nil, touchY = nil, touchMoved = false }
+             lapView = false, lapViewKey = false, touchX = nil, touchY = nil, touchMoved = false,
+             tb = false, tbAt = 0, tbSel = nil, tbKey = false, gConsume = false, gConsumeAt = 0 }
 end
 
 -- Everything the letters box shows, as one number (redraw only on change).
@@ -461,6 +462,221 @@ local function flush(widget)
     end
 end
 
+-- --- toolbar ------------------------------------------------------------------
+-- Swipe up (or long PAGE) opens a toolbar along the bottom; swipe down, a tap
+-- above it, RTN or TB_TIMEOUT seconds closes it, and so does choosing any
+-- button. Laps opens the lap view,
+-- Timer starts/pauses the countdown, Reset asks then clears laps and timer,
+-- Settings opens the Trackside tool. Only vertical swipes are ours, so
+-- swiping sideways between screens still works.
+local GFX = trackside.BASE .. "widget/gfx/"
+local TB_TIMEOUT = 10
+local GESTURE_DY, GESTURE_DX = 20, 40      -- px: min vertical, max sideways
+local TAP_SLOP = 15                        -- px a tap may move
+local GESTURE_HOLD = 0.75                  -- s to keep swallowing a used gesture
+local DIM = lcd.RGB(0, 0, 0, 0.6)
+local ICON = 55
+
+local TB_ITEMS = {
+    { id = "laps", label = "Laps", icon = "tb_laps" },
+    { id = "timer", label = "Timer", icon = "tb_timer" },
+    { id = "reset", label = "Reset", icon = "tb_reset" },
+    { id = "tool", label = "Settings", icon = "tb_settings" },
+}
+local tbMasks = nil                        -- loaded while the toolbar is open
+local tbRects = {}
+
+local function tbMask(it)
+    tbMasks = tbMasks or {}
+    local m = tbMasks[it.icon]
+    if m == nil then
+        m = lcd.loadMask(GFX .. it.icon .. ".png") or false
+        tbMasks[it.icon] = m
+    end
+    return m
+end
+
+local function tbLabel(it)
+    if it.id == "timer" then
+        if laps.timerRunning then return "Pause timer" end
+        return laps.timerExpired and "Restart timer" or "Start timer"
+    end
+    return it.label
+end
+
+local function tbBounds(W, H)
+    local barH = floor(math.max(H * 0.24, math.min(H * 0.40, W * 0.16)))
+    return 0, H - barH, W, barH
+end
+
+local function setToolbar(widget, on)
+    if widget.tb == on then return end
+    widget.tb, widget.tbAt, widget.full = on, os.clock(), true
+    widget.tbSel = on and (widget.tbSel or 1) or nil
+    if not on then tbMasks = nil end
+end
+
+local function drawToolbar(widget, W, H)
+    lcd.color(DIM)
+    lcd.drawFilledRectangle(0, 0, W, H)
+    local x, y, bw, bh = tbBounds(W, H)
+    lcd.color(C.bg)
+    lcd.drawFilledRectangle(x, y, bw, bh)
+    lcd.color(C.title)
+    lcd.drawFilledRectangle(x, y, bw, 4)
+    local n = #TB_ITEMS
+    local iw = bw / n
+    local pad = W <= 640 and 6 or 12
+    lcd.font(FONT_S)
+    for i, it in ipairs(TB_ITEMS) do
+        local ix = floor(x + (i - 1) * iw)
+        local r = tbRects[i] or {}
+        tbRects[i] = r
+        r.x, r.y, r.w, r.h, r.item = ix, y, floor(iw), bh, it
+        local tx, ty, tw, th = ix + pad, y + pad + 4, floor(iw) - 2 * pad, bh - 2 * pad - 4
+        local sel = widget.tbSel == i
+        lcd.color(sel and C.warn or C.box)
+        lcd.drawFilledRectangle(tx, ty, tw, th)
+        lcd.color(sel and C.bg or C.text)
+        local label = tbLabel(it)
+        local lw = lcd.getTextSize(label)
+        lcd.drawText(tx + floor((tw - lw) / 2), ty + 6, label)
+        local m = tbMask(it)
+        if m and lcd.drawMask then lcd.drawMask(tx + floor((tw - ICON) / 2), ty + th - ICON - 8, m) end
+    end
+end
+
+local function openLapView(widget)
+    widget.lapView, widget.lapViewKey, widget.full = true, laps.count, true
+end
+
+local function closeLapView(widget)
+    widget.lapView, widget.full = false, true
+    for _, b in ipairs(boxes) do b.key = false end   -- rebuild every box's text
+end
+
+local function tbActivate(widget, it)
+    if it.id == "laps" then
+        setToolbar(widget, false)
+        openLapView(widget)
+    elseif it.id == "timer" then
+        setToolbar(widget, false)
+        laps.toggleTimer()
+    elseif it.id == "reset" then
+        setToolbar(widget, false)
+        if form and form.openDialog then
+            form.openDialog({
+                title = "Reset",
+                message = "Reset the laps and the timer?",
+                buttons = {
+                    { label = "Reset", action = function() laps.resetAll() return true end },
+                    { label = "Cancel", action = function() return true end },
+                },
+            })
+        else
+            laps.resetAll()
+        end
+    elseif it.id == "tool" then
+        setToolbar(widget, false)
+        if trackside.toolHandle and system.openPage then system.openPage({ system = trackside.toolHandle }) end
+    end
+end
+
+local function consumeTouch()
+    if not system.killEvents then return end
+    if TOUCH_START then system.killEvents(TOUCH_START) end
+    if TOUCH_MOVE then system.killEvents(TOUCH_MOVE) end
+    if TOUCH_END then system.killEvents(TOUCH_END) end
+end
+
+local function isLeft(v) return v == ROTARY_LEFT or v == KEY_ROTARY_LEFT end
+local function isRight(v) return v == ROTARY_RIGHT or v == KEY_ROTARY_RIGHT end
+local function isBack(v) return v == KEY_RTN_BREAK or v == KEY_EXIT_BREAK or v == KEY_DOWN_BREAK end
+
+local function keyEvent(widget, value)
+    if value == KEY_PAGE_LONG and lcd.hasFocus() then
+        setToolbar(widget, not widget.tb)
+        system.killEvents(value)
+        return true
+    end
+    if widget.lapView and (isBack(value) or value == KEY_ENTER_BREAK) then
+        closeLapView(widget)
+        system.killEvents(value)
+        return true
+    end
+    if widget.tb and lcd.hasFocus() then
+        local n, i = #TB_ITEMS, widget.tbSel or 1
+        if isLeft(value) or isRight(value) then
+            i = i + (isLeft(value) and -1 or 1)
+            if i < 1 then i = n elseif i > n then i = 1 end
+            widget.tbSel, widget.tbAt, widget.full = i, os.clock(), true
+            return true
+        elseif value == KEY_ENTER_BREAK then
+            tbActivate(widget, TB_ITEMS[i])
+            return true
+        elseif isBack(value) then
+            setToolbar(widget, false)
+            return true
+        end
+    end
+    return false
+end
+
+local function event(widget, category, value, x, y)
+    -- Swallow the rest of a swipe we acted on, so Ethos doesn't act on it too.
+    if widget.gConsume and category == EVT_TOUCH then
+        if value == TOUCH_START or os.clock() - widget.gConsumeAt > GESTURE_HOLD then
+            widget.gConsume = false
+        else
+            consumeTouch()
+            if value == TOUCH_END then widget.gConsume = false end
+            return true
+        end
+    end
+    if category == EVT_KEY then return keyEvent(widget, value) end
+    if category ~= EVT_TOUCH then return false end
+
+    if value == TOUCH_START then
+        widget.touchX, widget.touchY, widget.touchMoved = x, y, false
+    elseif value == TOUCH_MOVE then
+        widget.slidingUntil = os.clock() + SLIDE_HOLD
+        if not widget.touchX then widget.touchX, widget.touchY, widget.touchMoved = x, y, false end
+        local dx, dy = x - widget.touchX, y - widget.touchY
+        if abs(dx) > TAP_SLOP or abs(dy) > TAP_SLOP then widget.touchMoved = true end
+        if abs(dx) <= GESTURE_DX and not widget.lapView then
+            local act = (dy <= -GESTURE_DY and not widget.tb) or (dy >= GESTURE_DY and widget.tb)
+            if act then
+                setToolbar(widget, dy < 0)
+                widget.gConsume, widget.gConsumeAt, widget.touchX = true, os.clock(), nil
+                consumeTouch()
+                return true
+            end
+        end
+    elseif value == TOUCH_END then
+        widget.slidingUntil = os.clock() + 0.1
+        local wasTap = widget.touchX and not widget.touchMoved
+        widget.touchX = nil
+        if not wasTap then return false end
+        if widget.lapView then
+            closeLapView(widget)
+            return true
+        end
+        if widget.tb then
+            for i = 1, #TB_ITEMS do
+                local r = tbRects[i]
+                if r and x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h then
+                    widget.tbSel = i
+                    tbActivate(widget, r.item)
+                    return true
+                end
+            end
+            setToolbar(widget, false)               -- tap above the bar closes it
+            return true
+        end
+    end
+    return false
+end
+
 local function wakeup(widget)
     -- Same rule as the rfsuite dashboard: no work while another screen is shown.
     -- The drive aids keep running from the Lua sources regardless.
@@ -480,6 +696,15 @@ local function wakeup(widget)
     if now - widget.themeAt >= THEME_EVERY then
         widget.themeAt = now
         if colors() then widget.full = true end
+    end
+
+    if widget.tb then
+        if now - widget.tbAt >= TB_TIMEOUT then
+            setToolbar(widget, false)
+        else
+            local k = (laps.timerRunning and 1 or 0) + (laps.timerExpired and 2 or 0)
+            if k ~= widget.tbKey then widget.tbKey, widget.full = k, true end
+        end
     end
 
     if widget.lapView then
@@ -526,54 +751,6 @@ local function wakeup(widget)
     flush(widget)
 end
 
--- Note touch slides (screen swipes) so wakeup can pause redraws. Never consumes
--- the event: Ethos still handles the swipe.
-local TAP_SLOP = 15        -- px a touch may move and still count as a tap
-
-local function inBox(b, x, y)
-    return b.x and x >= b.x and x < b.x + b.w and y >= b.y and y < b.y + b.h
-end
-
--- A tap: closes the lap view, opens it from the lap boxes, or opens the
--- Trackside tool from the aid letters. Returns true when handled.
-local function tap(widget, x, y)
-    if widget.lapView then
-        widget.lapView, widget.full = false, true
-        for _, b in ipairs(boxes) do b.key = false end   -- rebuild every box's text
-        return true
-    end
-    for _, b in ipairs(boxes) do
-        if b.lap and inBox(b, x, y) then
-            widget.lapView, widget.lapViewKey, widget.full = true, laps.count, true
-            return true
-        end
-    end
-    if inBox(lettersBox, x, y) and trackside.toolHandle and system.openPage then
-        system.openPage({ system = trackside.toolHandle })
-        return true
-    end
-    return false
-end
-
--- Touch: a tap that didn't move is ours; anything else is a swipe that Ethos
--- handles (redraws pause while it moves).
-local function event(widget, category, value, x, y)
-    if category ~= EVT_TOUCH then return false end
-    if value == TOUCH_START then
-        widget.touchX, widget.touchY, widget.touchMoved = x, y, false
-    elseif value == TOUCH_MOVE then
-        widget.slidingUntil = os.clock() + SLIDE_HOLD
-        if widget.touchX and (abs(x - widget.touchX) > TAP_SLOP or abs(y - widget.touchY) > TAP_SLOP) then
-            widget.touchMoved = true
-        end
-    elseif value == TOUCH_END then
-        widget.slidingUntil = os.clock() + 0.1
-        local wasTap = widget.touchX and not widget.touchMoved
-        widget.touchX = nil
-        if wasTap then return tap(widget, x, y) end
-    end
-    return false
-end
 
 -- Set trackside.DEBUG_PAINT = true (main.lua) to log paints per second.
 local paintCount, paintLogAt = 0, 0
@@ -607,6 +784,7 @@ local function paint(widget)
             end
         end
     end
+    if widget.tb then drawToolbar(widget, W, H) end
 end
 
 -- Settings live in the Trackside system tool (per model, not per widget).

@@ -417,14 +417,19 @@ def build():
         ["Live bar", "Throttle (green) or brake (red) from the centre line. The small mark below shows the wheel position."],
     ], [42 * mm, 128 * mm]))
     story.append(p("Telemetry values show <b>--</b> until the receiver sends them."))
-    story.append(p("Touch the dashboard", "h2"))
+    story.append(p("The toolbar", "h2"))
+    story.append(p("<b>Swipe up</b> on the dashboard (or long-press PAGE) to bring up the toolbar. Choosing a button "
+                   "closes it again; so do a swipe down, a tap above it, RTN, or 10 seconds without a touch. "
+                   "Swiping sideways between screens works as usual."))
     story.append(table([
-        ["Tap", "Opens"],
-        ["The lap boxes (CUR, L1, BEST, LAP)", "The lap view: every lap of the session, best in green, with LAPS, BEST, "
-         "AVG and TOT. Tap anywhere to go back."],
-        ["The aid letters", "The Trackside tool (needs Ethos 26.1 or later)."],
-    ], [58 * mm, 112 * mm]))
-    story.append(p("Swiping between screens works as usual: only a tap that doesn't move counts."))
+        ["Button", "Does"],
+        ["Laps", "Opens the lap view: every lap of the session, best in green, with LAPS, BEST, AVG and TOT. "
+         "Tap anywhere (or RTN) to go back."],
+        ["Start / Pause timer", "Starts or pauses the countdown (restarts it after it has run out)."],
+        ["Reset", "Asks, then resets the laps and the countdown."],
+        ["Settings", "Opens the Trackside tool (needs Ethos 26.1 or later)."],
+    ], [42 * mm, 128 * mm]))
+    story.append(shot("34-toolbar", "The toolbar, after a swipe up", width=105 * mm))
     story.append(pair("32-lap-view", "Lap view: 6 laps, best 3.66",
                       "33-dash-alarm", "Battery alarm: the PACK box flashes red"))
     story.append(p("Fuel (BATT)", "h2"))

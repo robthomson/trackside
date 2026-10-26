@@ -23,11 +23,11 @@ Spec and checklist: [FEATURES.md](FEATURES.md).
 1. ~~Drive-aid core~~ Done in the sim: all five aids, measured on the channel outputs. The ~20 ms Lua update
    limits ABS to about 10–15 Hz; check the rate on a real VX10 and cap the range if needed.
 2. ~~Verify multiplier scale~~ Done: sources output on the mixer's 1024 = 100% scale; 0.5 halves the channel.
-3. ~~Laps + session timer~~ Done: debounce, reset hold, haptics, spoken lap times, lap view (tap the lap boxes).
+3. ~~Laps + session timer~~ Done: debounce, reset hold, haptics, spoken lap times, lap view (toolbar).
 4. ~~Battery~~ Done: cells, %, fuel estimate (Pack Fuel sensor), spoken alarm with haptic, PACK amber / flashing red.
 5. **Telemetry** for the top bar: LQ, SNR, TX voltage, TX power (ELRS and FrSky names).
 6. ~~Dashboard~~ Done: all boxes, timer footer, new-best flash, PACK alarm highlight, lap view.
-7. ~~Settings from the dashboard~~ Done: tap the aid letters to open the Trackside tool. Later: a live scope bar on
+7. ~~Settings from the dashboard~~ Done: swipe up for the toolbar, then Settings. Later: a live scope bar on
    the Brake / ABS, Drive aids and Inputs pages.
 8. Bench and track test on a real VX10.
 

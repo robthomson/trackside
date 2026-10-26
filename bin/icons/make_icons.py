@@ -1,7 +1,8 @@
 """
 Draw the Trackside tool icons (Ethos masks: black art on white, RGB).
 
-Output: src/trackside/tool/gfx/*.png  (70x70 tiles, 32x32 nav)
+Output: src/trackside/tool/gfx/*.png    (70x70 tiles, 32x32 nav)
+        src/trackside/widget/gfx/*.png  (55x55 dashboard toolbar)
 Usage:  python bin/icons/make_icons.py
 Requires: Pillow
 """
@@ -12,6 +13,7 @@ from PIL import Image, ImageDraw
 
 REPO = Path(__file__).resolve().parents[2]
 OUT = REPO / "src" / "trackside" / "tool" / "gfx"
+OUT_WIDGET = REPO / "src" / "trackside" / "widget" / "gfx"
 S = 4  # draw at 4x, then downsample for smooth edges
 
 
@@ -20,8 +22,8 @@ def canvas(size):
     return img, ImageDraw.Draw(img)
 
 
-def save(img, name, size):
-    img.resize((size, size), Image.LANCZOS).convert("RGB").save(OUT / f"{name}.png")
+def save(img, name, size, out=None):
+    img.resize((size, size), Image.LANCZOS).convert("RGB").save((out or OUT) / f"{name}.png")
 
 
 def w(px):
@@ -109,8 +111,51 @@ def back():
     save(img, "back", 32)
 
 
+# --- dashboard toolbar (drawn on the 70 grid, saved at 55) -------------------
+
+def tb_laps():
+    img, d = canvas(70)
+    for i in range(4):
+        y = 14 + i * 13
+        d.ellipse(box(9, y - 3, 15, y + 3), fill=0)
+        d.line([w(22), w(y), w(60), w(y)], fill=0, width=w(4))
+    save(img, "tb_laps", 55, OUT_WIDGET)
+
+
+def tb_timer():
+    img, d = canvas(70)
+    d.ellipse(box(12, 16, 58, 62), outline=0, width=w(4))
+    d.rectangle(box(30, 6, 40, 11), fill=0)
+    d.line([w(35), w(11), w(35), w(16)], fill=0, width=w(3))
+    d.polygon([(w(30), w(28)), (w(30), w(50)), (w(47), w(39))], fill=0)
+    save(img, "tb_timer", 55, OUT_WIDGET)
+
+
+def tb_reset():
+    img, d = canvas(70)
+    d.arc(box(12, 12, 58, 58), 40, 330, fill=0, width=w(5))
+    d.polygon([(w(48), w(6)), (w(60), w(22)), (w(42), w(24))], fill=0)
+    save(img, "tb_reset", 55, OUT_WIDGET)
+
+
+def tb_settings():
+    import math
+    img, d = canvas(70)
+    cx = cy = 35
+    teeth = []
+    for i in range(16):
+        a = math.pi * 2 * i / 16
+        r = 27 if i % 2 == 0 else 20
+        teeth.append((w(cx + r * math.cos(a)), w(cy + r * math.sin(a))))
+    d.polygon(teeth, fill=0)
+    d.ellipse(box(cx - 15, cy - 15, cx + 15, cy + 15), fill=0)
+    d.ellipse(box(cx - 8, cy - 8, cx + 8, cy + 8), fill=255)
+    save(img, "tb_settings", 55, OUT_WIDGET)
+
+
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
-    for f in (flag, check, brake, wheel, inputs, laps, battery, back):
+    OUT_WIDGET.mkdir(parents=True, exist_ok=True)
+    for f in (flag, check, brake, wheel, inputs, laps, battery, back, tb_laps, tb_timer, tb_reset, tb_settings):
         f()
     print(f"Wrote icons to {OUT}")
