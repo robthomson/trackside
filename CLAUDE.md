@@ -8,7 +8,9 @@ Trackside: Ethos Lua race suite for the FrSky Velox VX10 (800×480 colour touch,
 - Physical analogs: member 0 = `Steering`, 1 = `Throttle`, 2/3 = pots `S1`/`S2`. `source:value()` is ±1024.
 - The VX10 has haptic (vibration) and a speaker: use both for race feedback.
 - Lua sources only appear in pickers after enabling them in **Model → Lua**. Mixes support **Multiply**.
-- A Lua source value of 1.0 shows as 100% in the mix editor (still to confirm on the channel monitor).
+- The mixer reads a Lua source's raw value with 1024 = 100%. A value of 1.00 with 2 decimals counts as ~9.8%.
+  So the aid sources send `round(multiplier * 1024)` with `decimals(0)` (checked on the channel monitor:
+  throttle 50% x 1.0 = 50%, x 0.5 = 25%).
 - All scripts share one Lua state: the suite lives in the global `trackside` table.
 - Load files with absolute `SCRIPTS:/trackside/...` paths (see `trackside.BASE`).
 - Registration keys are max 7 chars and must never change after release (`tsDrv`, `tsStr`, `tshome`).

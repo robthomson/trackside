@@ -23,7 +23,7 @@ Spec and checklist: [FEATURES.md](FEATURES.md).
 1. **Drive-aid core** ([core.lua](../src/trackside/lib/core.lua)): implement the five stages in order, with a
    time step from `os.clock()`. Check how often Lua source `wakeup` runs on the VX10. ABS at 33 Hz needs
    ~15 ms resolution; if the Lua loop is slower, cap the frequency or switch to a duty-cycle model.
-2. **Verify multiplier scale** in the sim channel monitor: Throttle Aid = 0.5 should halve the throttle channel.
+2. ~~Verify multiplier scale~~ Done: sources output on the mixer's 1024 = 100% scale; 0.5 halves the channel.
 3. **Laps + session timer** module (debounce, reset hold, haptics).
 4. **Battery** module: pack voltage/cells from telemetry, Auto cell lock, LiPo/LiHV %, STATE machine, alarm haptics.
 5. **Telemetry** for the top bar: LQ, SNR, TX voltage, TX power (ELRS and FrSky names).

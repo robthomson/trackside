@@ -37,40 +37,37 @@ function trackside.getForm()
     return trackside.form
 end
 
-local function sourceThrottle()
-    return {
-        key = "tsDrv",
-        name = "Throttle Aid",
-        init = function(source)
-            source:decimals(2)
-            source:value(1.0)
-        end,
-        wakeup = function(source)
-            trackside.core.update()
-            source:value(trackside.core.out.drive)
-        end,
-    }
-end
+-- The mixer reads a Lua source's raw value on a 1024 = 100% scale (checked in
+-- the VX10 sim: a value of 1.00 with 2 decimals multiplied throttle by ~0.098).
+-- So a multiplier m is sent as round(m * 1024), with no decimals.
+local MIX_SCALE = 1024
+local floor = math.floor
 
-local function sourceSteering()
+local function aidSource(key, name, field)
+    local last = nil
     return {
-        key = "tsStr",
-        name = "Steer Aid",
+        key = key,
+        name = name,
         init = function(source)
-            source:decimals(2)
-            source:value(1.0)
+            source:decimals(0)
+            source:value(MIX_SCALE)
+            last = MIX_SCALE
         end,
         wakeup = function(source)
             trackside.core.update()
-            source:value(trackside.core.out.strmul)
+            local v = floor(trackside.core.out[field] * MIX_SCALE + 0.5)
+            if v ~= last then
+                last = v
+                source:value(v)
+            end
         end,
     }
 end
 
 local function init()
     -- Keys are saved in models: never change them.
-    system.registerSource(sourceThrottle())
-    system.registerSource(sourceSteering())
+    system.registerSource(aidSource("tsDrv", "Throttle Aid", "drive"))
+    system.registerSource(aidSource("tsStr", "Steer Aid", "strmul"))
     system.registerWidget(load("widget/home.lua"))
     print(string.format("[trackside] boot %.3fs, RAM %d KB", os.clock() - bootAt, math.floor(collectgarbage("count"))))
 end

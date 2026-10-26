@@ -22,6 +22,9 @@ Free mix per channel, directly after it:
 | Throttle | Lua → **Throttle Aid** | **Multiply** | 100% | the throttle channel |
 | Steering | Lua → **Steer Aid** | **Multiply** | 100% | the steering channel |
 
+Set each Free mix's **Output** to the right channel (CH2 Throttle / CH1 Steering on the car template).
+A new Free mix starts with Output = `---` (shown in red) and does nothing until it's set.
+
 Use exactly one Multiply line per channel. A second one multiplies twice.
 Put any reverse on the original stick line, not on the Multiply line.
 If the script stops, the stick lines still drive the car.
