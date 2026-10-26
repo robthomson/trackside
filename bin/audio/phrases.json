@@ -1,7 +1,7 @@
 [
   { "file": "battery_low.wav", "text": "Battery low" },
   { "file": "fuel.wav", "text": "Fuel" },
-  { "file": "aidtest_on.wav", "text": "Aid test on. Both aids at half." },
+  { "file": "aidtest_on.wav", "text": "Aid test on. The aids pulse to half." },
   { "file": "aidtest_off.wav", "text": "Aid test off" },
   { "file": "aids_off.wav", "text": "Drive aids off. Trackside error." },
   { "file": "aids_enabled.wav", "text": "Drive aids on" },

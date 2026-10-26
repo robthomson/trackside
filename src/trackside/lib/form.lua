@@ -34,18 +34,19 @@ local function addNumber(line, s)
             return tostring(v) .. (s.unit or "")
         end)
     end
+    return field
 end
 
 local function addChoice(line, s)
     local values = {}
     for i, label in ipairs(s.choices) do values[i] = { label, i } end
-    form.addChoiceField(line, nil, values,
+    return form.addChoiceField(line, nil, values,
         function() return settings.get(s.key) end,
         function(v) settings.set(s.key, v) end)
 end
 
 local function addSource(line, s)
-    form.addSourceField(line, nil,
+    return form.addSourceField(line, nil,
         function()
             local v = settings.get(s.key)
             if not v then return nil end
@@ -62,7 +63,7 @@ end
 
 -- Switch picker (switch positions, logic switches, ...), stored like a source.
 local function addSwitch(line, s)
-    form.addSwitchField(line, nil,
+    return form.addSwitchField(line, nil,
         function()
             local v = settings.get(s.key)
             if not v then return nil end
@@ -84,14 +85,15 @@ function M.addFields(tab)
     for _, s in ipairs(settings.schema) do
         if s.tab == tab then
             local line = form.addLine(s.label)
+            local field
             if s.kind == "num" then
-                addNumber(line, s)
+                field = addNumber(line, s)
             elseif s.kind == "choice" then
-                addChoice(line, s)
+                field = addChoice(line, s)
             elseif s.kind == "source" then
-                addSource(line, s)
+                field = addSource(line, s)
             elseif s.kind == "switch" then
-                addSwitch(line, s)
+                field = addSwitch(line, s)
             end
         end
     end

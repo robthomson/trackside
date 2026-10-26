@@ -61,32 +61,63 @@ end
 
 ---------------------------------------------------------------- Check setup
 
-local MOVE_MIN = 0.2      -- input must be past 20% to judge a channel
+local MOVE_MIN = 0.3      -- input must be past 30% to compare the two pulse halves
+local CENTRE = 0.05       -- input under 5%: centre-stick check
+local STEADY = 0.03       -- input may move this much between the two halves
+local SETTLE = 0.4        -- s into a pulse half before sampling (source + mixer delay)
 local SEEN_TIMEOUT = 2.5  -- s without a wakeup = source/sensor not running
 
 local function pct(v) return string.format("%d%%", math.floor(v * 100 + (v >= 0 and 0.5 or -0.5))) end
 
-local function newAxis(inKey, chKey, inName)
-    return { inKey = inKey, chKey = chKey, inName = inName, base = nil, verdict = nil }
+-- Per channel: the last sample taken in each half of the Aid Test pulse.
+local function newAxis(inKey, chKey)
+    return { inKey = inKey, chKey = chKey, verdict = nil, at = nil,
+             hIn = nil, hOut = nil, hAt = nil,      -- half (x0.5)
+             fIn = nil, fOut = nil, fAt = nil }     -- full (x1.0)
 end
 
--- Ratio of channel output to input. With the aids at x1.0 this is the
--- baseline (rates, end points). During the Aid Test it should halve.
-local function judge(a, inp, out, testing)
-    if inp > -MOVE_MIN and inp < MOVE_MIN then return end
-    local r = out / inp
-    if not testing then
-        a.base = r
+local function resetAxis(a)
+    a.verdict, a.at, a.hIn, a.hOut, a.hAt, a.fIn, a.fOut, a.fAt = nil, nil, nil, nil, nil, nil, nil, nil
+end
+
+-- Compare the two halves taken back to back at the same stick position: with
+-- Multiply the x0.5 half is exactly half the x1.0 half, whatever the curves.
+local function judge(a)
+    if not (a.hAt and a.fAt) or math.abs(a.hAt - a.fAt) > 1.0 then return end
+    if math.abs(a.hIn - a.fIn) > STEADY then return end           -- stick moved
+    local inp = (a.hIn + a.fIn) / 2
+    if inp > -CENTRE and inp < CENTRE then
+        -- Multiply keeps a centred stick at ~0; Add pushes the channel off centre.
+        if math.abs(a.fOut) > 0.25 then a.verdict = "Wrong: set Operation Multiply" end
         return
     end
-    local rel = r / ((a.base and a.base > 0.05) and a.base or 1)
-    if rel > 0.35 and rel < 0.65 then
+    if inp > -MOVE_MIN and inp < MOVE_MIN then return end
+    if math.abs(a.fOut) < 0.1 then
+        -- Both halves near 0: the channel isn't driven. Only one: an Add line.
+        a.verdict = (math.abs(a.hOut) < 0.1) and "No output: check the channel" or "Wrong: set Operation Multiply"
+        return
+    end
+    local rel = a.hOut / a.fOut
+    if rel > 0.4 and rel < 0.6 then
         a.verdict = "OK: moves half as far"
-    elseif rel >= 0.8 then
+    elseif rel >= 0.85 then
         a.verdict = "Not working: aid line missing or off"
     else
         a.verdict = "Wrong: set Operation Multiply"
     end
+end
+
+local function sample(a, inp, now)
+    if now - core.testPhaseAt < SETTLE or a.at == core.testPhaseAt then return end
+    a.at = core.testPhaseAt
+    local ch = settings.source(a.chKey)
+    local out = ch and (ch:value() or 0) / 1024 or 0
+    if core.testMul < 1 then
+        a.hIn, a.hOut, a.hAt = inp, out, now
+    else
+        a.fIn, a.fOut, a.fAt = inp, out, now
+    end
+    judge(a)
 end
 
 local function setText(f, slot, text)
@@ -99,8 +130,8 @@ end
 local function buildCheck()
     check = {
         last = {},
-        thr = newAxis("throttleSrc", "throttleCh", "Throttle"),
-        str = newAxis("steerSrc", "steerCh", "Steering"),
+        thr = newAxis("throttleSrc", "throttleCh"),
+        str = newAxis("steerSrc", "steerCh"),
         at = 0,
     }
     local function staticLine(label)
@@ -108,13 +139,14 @@ local function buildCheck()
     end
     check.sensor = staticLine("Trackside sensor")
     check.fuel = staticLine("Fuel")
-    local testLine = form.addLine("Aid Test (both aids x0.5)")
+    local testLine = form.addLine("Aid Test (aids pulse x0.5)")
     form.addBooleanField(testLine, nil,
         function() return core.testUntil ~= nil end,
         function(on)
             core.setTest(on)
             trackside.audio.say(on and "aidtest_on" or "aidtest_off")
-            check.thr.verdict, check.str.verdict = nil, nil
+            resetAxis(check.thr)
+            resetAxis(check.str)
         end)
     check.drive = staticLine("Throttle Aid")
     check.strmul = staticLine("Steer Aid")
@@ -144,7 +176,6 @@ local function liveAxis(a, liveField, resField, inp, testing)
     local ch = settings.source(a.chKey)
     local chName = ch and ch:name() or "---"
     local out = ch and (ch:value() or 0) / 1024 or 0
-    judge(a, inp, out, testing)
     setText(liveField, liveField, string.format("In %s   %s %s", pct(inp), chName, pct(out)))
     local res
     if not testing then
@@ -152,13 +183,18 @@ local function liveAxis(a, liveField, resField, inp, testing)
     elseif a.verdict then
         res = a.verdict
     else
-        res = (a == check.thr) and "Pull the trigger" or "Turn the wheel"
+        res = (a == check.thr) and "Hold the trigger steady past 30%" or "Hold the wheel steady past 30%"
     end
     setText(resField, resField, res)
 end
 
 local function wakeupCheck()
     local now = os.clock()
+    local testing = core.testUntil ~= nil
+    if testing then
+        sample(check.thr, core.input.thr, now)
+        sample(check.str, core.input.steer, now)
+    end
     if now - check.at < 0.2 then return end
     check.at = now
     local alive = trackside.aliveAt
@@ -167,7 +203,6 @@ local function wakeupCheck()
     setText(check.fuel, check.fuel, fuelText())
     setText(check.drive, check.drive, aidText("drive"))
     setText(check.strmul, check.strmul, aidText("strmul"))
-    local testing = core.testUntil ~= nil
     liveAxis(check.thr, check.thrLive, check.thrRes, core.input.thr, testing)
     liveAxis(check.str, check.strLive, check.strRes, core.input.steer, testing)
 end

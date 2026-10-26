@@ -6,8 +6,8 @@ Phase 1 covers ABS, traction control,
 steer cut throttle, corner brake, steer limit, lap timer, session timer and battery alarm. After that the
 aim is to build on it, using the VX10's colour touch screen and Ethos. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-> **Status: bootstrap.** Loads and runs on the VX10 simulator. The drive aids are pass-through stubs, so
-> they don't change throttle or steering yet.
+> **Status: early.** Runs on the VX10 simulator; all five drive aids work there (measured on the channel
+> outputs). Not yet driven on a real VX10. Every aid is OFF in a new model.
 
 ## What's in it
 
@@ -25,7 +25,7 @@ aim is to build on it, using the VX10's colour touch screen and Ethos. See [docs
 src/trackside/         -> deployed to SCRIPTS/trackside/ on the radio
   main.lua             registers the sources, the widget and the system tool
   lib/settings.lua     settings schema (ranges/defaults) + per-model save
-  lib/core.lua         drive-aid pipeline (stubs for now)
+  lib/core.lua         drive-aid pipeline: traction, steer cut, corner brake, ABS, steer limit
   lib/form.lua         settings fields generated from the schema (loaded on first use)
   tool/app.lua         Trackside system tool: menu, settings pages, Check setup
   tool/gfx/            tool icons (made by bin/icons/make_icons.py)
