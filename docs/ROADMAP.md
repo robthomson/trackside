@@ -20,16 +20,16 @@ rfsuite dashboard engine.
 
 Spec and checklist: [FEATURES.md](FEATURES.md).
 
-1. **Drive-aid core** ([core.lua](../src/trackside/lib/core.lua)): implement the five stages in order, with a
-   time step from `os.clock()`. Check how often Lua source `wakeup` runs on the VX10. ABS at 33 Hz needs
-   ~15 ms resolution; if the Lua loop is slower, cap the frequency or switch to a duty-cycle model.
+1. ~~Drive-aid core~~ Done in the sim: all five aids, measured on the channel outputs. The ~20 ms Lua update
+   limits ABS to about 10–15 Hz; check the rate on a real VX10 and cap the range if needed.
 2. ~~Verify multiplier scale~~ Done: sources output on the mixer's 1024 = 100% scale; 0.5 halves the channel.
-3. **Laps + session timer** module (debounce, reset hold, haptics).
-4. **Battery** module: pack voltage/cells from telemetry, Auto cell lock, LiPo/LiHV %, STATE machine, alarm haptics.
+3. ~~Laps + session timer~~ Done: debounce, reset hold, haptics, spoken lap times. Still to do: a lap view (AVG / TOT).
+4. ~~Battery~~ Mostly done: cells, %, fuel estimate (Pack Fuel sensor), spoken alarm with haptic. Still to do: PACK
+   box colour/flash on LOW / ALARM.
 5. **Telemetry** for the top bar: LQ, SNR, TX voltage, TX power (ELRS and FrSky names).
-6. **Dashboard**: fill all boxes; PACK highlight; timer footer; new-best flash.
-7. **Settings from the dashboard**: ENTER/touch opens the Trackside tool's pages over the dash, with the
-   live scope bar on Brake / ABS, Drive aids and Inputs.
+6. **Dashboard**: boxes, timer footer and new-best flash done. Still to do: PACK highlight on LOW / ALARM.
+7. **Settings from the dashboard**: settings now live in the Trackside system tool (with Check setup).
+   Still to do: open it from the dashboard, with the live scope bar on Brake / ABS, Drive aids and Inputs.
 8. Bench and track test on a real VX10.
 
 ## Phase 2 — dashboard engine

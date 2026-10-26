@@ -36,6 +36,7 @@ trackside.diysensor = load("lib/diysensor.lua")
 trackside.fuel = load("lib/fuel.lua")
 trackside.audio = load("lib/audio.lua")
 trackside.alerts = load("lib/alerts.lua")
+trackside.laps = load("lib/laps.lua")
 
 -- The settings fields and the tool pages are UI only: loaded on first use.
 function trackside.getForm()
@@ -112,6 +113,7 @@ local function aidSource(key, name, field)
             trackside.seen[field] = os.clock()     -- shown on Check setup
             pcall(heartbeat)
             pcall(trackside.background)
+            pcall(trackside.laps.update)
             local ok, err = pcall(step, source)
             if not ok then
                 if last ~= MIX_SCALE then

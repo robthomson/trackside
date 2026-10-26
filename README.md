@@ -60,6 +60,7 @@ src/trackside/         -> deployed to SCRIPTS/trackside/ on the radio
   lib/diysensor.lua    telemetry sensors Trackside creates (Trackside, Pack Fuel)
   lib/audio.lua        spoken phrases (user file, radio voice, en/default) and numbers
   lib/alerts.lua       voltage alarm, fuel callouts, Aid Test announcements
+  lib/laps.lua         lap timer (lap switch, best, callouts) and session countdown
   audio/               generated WAVs (bin/audio/generate.py from bin/audio/phrases.json)
   widget/home.lua      Trackside dashboard
 bin/sensors/          simulator sensor tool

@@ -381,6 +381,23 @@ def build():
                    "All aids are OFF by default. ABS above about 10 Hz can't be timed exactly by the radio."))
     story.append(PageBreak())
 
+    story.append(p("Laps and timer", "h2"))
+    story.append(p("On the <b>Timer &amp; laps</b> page, set <b>Lap Switch</b> to a button or switch position you can press "
+                   "as you cross the line, and <b>Timer Switch</b> to another. Turn <b>Show Timer</b> ON to see the "
+                   "countdown in place of the aid letters."))
+    story.append(table([
+        ["Do this", "What happens"],
+        ["Press the Lap Switch", "The first press starts the clock (or the first throttle, with Throttle Start Lap ON). "
+         "Each later press ends a lap: buzz, and the lap time is spoken (\"Best lap\" first on a new best). "
+         "Presses less than 3 seconds apart are ignored."],
+        ["Hold the Lap Switch 1.2 s", "A bar fills along the CUR box, then the laps reset (\"Laps reset\")."],
+        ["Press the Timer Switch", "Starts or pauses the countdown. After it has run out, starts it again."],
+        ["Hold the Timer Switch 1.2 s", "Resets the countdown to Timer minutes (\"Timer reset\")."],
+    ], [48 * mm, 122 * mm]))
+    story.append(pair("30-settings-laps", "Timer & laps settings",
+                      "31-dash-laps", "Racing: lap 3 running, best 4.22, countdown in the footer"))
+    story.append(PageBreak())
+
     # --- 8 dashboard tour ------------------------------------------------------
     story.append(p("8. Reading the dashboard", "h1"))
     story.append(pair("22-dash-throttle", "On throttle: the bar fills green to the right",
@@ -391,10 +408,11 @@ def build():
         ["PACK", "Car pack voltage, with the detected cell count (for example 2S) in the corner. "
                  "Green above 50%, amber below 50%, red below 20%."],
         ["CELL / BATT / MIN", "Voltage per cell, fuel left (see below), and the lowest pack voltage this session."],
-        ["CUR / L1 / BEST / LAP", "Lap timing: current lap, last lap, best lap and lap count. "
-                                  "The lap timer arrives in a later version."],
+        ["CUR / L1 / BEST / LAP", "Lap timing: current lap, last lap, best lap (green for 3 s after a new best) "
+                                  "and lap count."],
         ["A T S C D", "Drive aid letters: in the aid's own colour while it's working, white when it's armed, grey "
-                      "when it's OFF. Struck through when the Aids Switch has turned the aids off."],
+                      "when it's OFF. Struck through when the Aids Switch has turned the aids off. With Show Timer "
+                      "ON this box shows the countdown instead: grey when paused, red and blinking when it has run out."],
         ["Live bar", "Throttle (green) or brake (red) from the centre line. The small mark below shows the wheel position."],
     ], [42 * mm, 128 * mm]))
     story.append(p("Telemetry values show <b>--</b> until the receiver sends them."))
@@ -418,6 +436,8 @@ def build():
          "Voltage for 5 seconds (readings on throttle don't count). Repeats every 30 seconds."],
         ["Aid test on / Aid test off", "The Aid Test on Check setup starts or ends."],
         ["Drive aids on / Drive aids off + short buzz", "You flip the Aids Switch."],
+        ["4.2 seconds / Best lap, 4.2 seconds + buzz", "Each lap (Lap Callout and Lap Haptic on the Timer & laps page)."],
+        ["One minute / Time up + vibration", "The countdown reaches 1:00 and 0:00. After 0:00 it buzzes every 10 s for a minute."],
         ["Drive aids off. Trackside error. + vibration", "A Trackside error released the aids: the car drives on the plain sticks."],
     ], [62 * mm, 108 * mm])]))
     story.append(p("Alerts use the radio's voice setting (English: default, US or UK). To use your own recording, put a "
