@@ -5,7 +5,7 @@
     connected, lq, snr, txpower, pack, current, used, rpm, esc_temp, motor_temp, txbatt
 
   In the Ethos simulator, values come from SCRIPTS:/trackside.user/sim/sensors.lua,
-  written live by the sensor tool (bin/sensors/sensors.py). On a radio they come
+  written by the sensor tool (bin/sensors/sensors.py) and re-read every 2 s. On a radio they come
   from real sensors, looked up by name.
 
   Real sensor names are a first guess per receiver system and still need
@@ -15,7 +15,7 @@
 local telemetry = {}
 
 local SIM_FILE = "SCRIPTS:/trackside.user/sim/sensors.lua"
-local SIM_READ_EVERY = 1.0       -- seconds (simulator only)
+local SIM_READ_EVERY = 2.0       -- seconds (simulator only)
 local LOOKUP_RETRY = 2.0         -- seconds between retries for a missing sensor
 
 local isSim = system.getVersion().simulation == true
@@ -35,28 +35,34 @@ local NAMES = {
 }
 
 -- --- simulator ---------------------------------------------------------------
-local sim = { values = nil, readAt = -math.huge }
+-- Values are resolved (jitter applied) once per file read into a reused table,
+-- so they only change every SIM_READ_EVERY seconds, not on every lookup.
+local sim = { values = {}, ok = false, readAt = -math.huge }
 
 local function readSim(now)
     if now - sim.readAt < SIM_READ_EVERY then return end
     sim.readAt = now
+    local values = sim.values
+    for k in pairs(values) do values[k] = nil end
+    sim.ok = false
     local chunk = loadfile(SIM_FILE)
-    if not chunk then
-        sim.values = nil
-        return
-    end
+    if not chunk then return end
     local ok, t = pcall(chunk)
-    sim.values = (ok and type(t) == "table") and t or nil
+    if not ok or type(t) ~= "table" then return end
+    sim.ok = true
+    for k, v in pairs(t) do
+        if type(v) == "table" and type(v.value) == "number" then
+            local value = v.value
+            if v.jitter and v.jitter > 0 and value ~= 0 then
+                value = value * (1 + (math.random() * 2 - 1) * v.jitter / 100)
+            end
+            values[k] = value
+        end
+    end
 end
 
 local function simGet(key)
-    local v = sim.values and sim.values[key]
-    if type(v) ~= "table" or type(v.value) ~= "number" then return nil end
-    local value = v.value
-    if v.jitter and v.jitter > 0 and value ~= 0 then
-        value = value * (1 + (math.random() * 2 - 1) * v.jitter / 100)
-    end
-    return value
+    return sim.values[key]
 end
 
 -- --- real sensors ------------------------------------------------------------
@@ -101,7 +107,7 @@ function telemetry.get(key)
 
     if isSim then
         readSim(now)
-        if sim.values then
+        if sim.ok then
             -- When the sim says the link is lost, every link sensor reads as no data.
             local conn = simGet("connected")
             if key ~= "connected" and conn == 0 then return nil end

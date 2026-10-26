@@ -256,10 +256,18 @@ local function drawScope(b)
 end
 
 -- --- widget callbacks --------------------------------------------------------
+local SLIDE_HOLD = 0.35     -- s after the last touch move before redraws resume
+
+local scopeBox, lettersBox
+for _, b in ipairs(boxes) do
+    if b.kind == "scope" then scopeBox = b elseif b.kind == "letters" then lettersBox = b end
+end
+
 local function create()
     colors()
     return { textAt = -math.huge, scopeAt = -math.huge, themeAt = os.clock(),
-             thrKey = false, steerKey = false, flagKey = false }
+             thrKey = false, steerKey = false, flagKey = false,
+             visible = false, slidingUntil = 0, full = true, pending = {} }
 end
 
 local function flagKey()
@@ -267,21 +275,55 @@ local function flagKey()
     return (f.A and 1 or 0) + (f.T and 2 or 0) + (f.S and 4 or 0) + (f.C and 8 or 0) + (f.D and 16 or 0)
 end
 
+-- Queue one box for redraw. Boxes are only invalidated as rectangles, never the
+-- whole window, so a moving steering tick doesn't repaint the full screen.
+local function markBox(widget, b)
+    if b.header and not layoutFull then return end
+    widget.pending[b] = true
+end
+
+local function flush(widget)
+    if widget.full then
+        widget.full = false
+        for b in pairs(widget.pending) do widget.pending[b] = nil end
+        lcd.invalidate()
+        return
+    end
+    if not layoutW then return end            -- not laid out yet: first paint is full anyway
+    for b in pairs(widget.pending) do
+        widget.pending[b] = nil
+        lcd.invalidate(b.x, b.y, b.w, b.h)
+    end
+end
+
 local function wakeup(widget)
+    -- Same rule as the rfsuite dashboard: no work while another screen is shown.
+    -- The drive aids keep running from the Lua sources regardless.
+    if not lcd.isVisible() then
+        widget.visible = false
+        return
+    end
+    if not widget.visible then
+        widget.visible = true
+        widget.full = true                    -- came back into view: redraw everything once
+    end
+
     core.update()
     local now = os.clock()
-    local dirty = false
 
     if now - widget.themeAt >= THEME_EVERY then
         widget.themeAt = now
-        if colors() then dirty = true end
+        if colors() then widget.full = true end
     end
 
     if now - widget.textAt >= TEXT_EVERY then
         widget.textAt = now
         battery.update()
         for i = 1, #boxes do
-            if refreshBox(boxes[i]) then dirty = true end
+            local b = boxes[i]
+            if b.src or b.sub or b.color then
+                if refreshBox(b) then markBox(widget, b) end
+            end
         end
     end
 
@@ -289,17 +331,47 @@ local function wakeup(widget)
         widget.scopeAt = now
         local t = floor(core.proc.thr * 100 + 0.5)
         local s = floor(core.input.steer * 100 + 0.5)
+        if t ~= widget.thrKey or s ~= widget.steerKey then
+            widget.thrKey, widget.steerKey = t, s
+            markBox(widget, scopeBox)
+        end
         local f = flagKey()
-        if t ~= widget.thrKey or s ~= widget.steerKey or f ~= widget.flagKey then
-            widget.thrKey, widget.steerKey, widget.flagKey = t, s, f
-            dirty = true
+        if f ~= widget.flagKey then
+            widget.flagKey = f
+            markBox(widget, lettersBox)
         end
     end
 
-    if dirty then lcd.invalidate() end
+    -- Hold redraws while the screen is being swiped; flush once it settles.
+    if now < widget.slidingUntil then return end
+    flush(widget)
 end
 
+-- Note touch slides (screen swipes) so wakeup can pause redraws. Never consumes
+-- the event: Ethos still handles the swipe.
+local function event(widget, category, value, x, y)
+    if category == EVT_TOUCH then
+        if value == TOUCH_MOVE then
+            widget.slidingUntil = os.clock() + SLIDE_HOLD
+        elseif value == TOUCH_END then
+            widget.slidingUntil = os.clock() + 0.1
+        end
+    end
+    return false
+end
+
+-- Set trackside.DEBUG_PAINT = true (main.lua) to log paints per second.
+local paintCount, paintLogAt = 0, 0
+
 local function paint(widget)
+    if trackside.DEBUG_PAINT then
+        paintCount = paintCount + 1
+        local now = os.clock()
+        if now - paintLogAt >= 2 then
+            print(format("[trackside] paints/s %.1f", paintCount / (now - paintLogAt)))
+            paintCount, paintLogAt = 0, now
+        end
+    end
     local W, H = lcd.getWindowSize()
     layout(W, H)
     lcd.color(C.bg)
@@ -335,6 +407,7 @@ return {
     create = create,
     wakeup = wakeup,
     paint = paint,
+    event = event,
     configure = configure,
     write = write,
     title = false,

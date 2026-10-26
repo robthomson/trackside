@@ -28,7 +28,10 @@ Trackside: Ethos Lua race suite for the FrSky Velox VX10 (800×480 colour touch,
 
 - Treat `wakeup`, `paint` and source callbacks as hot paths: no new tables, closures or strings per tick.
   Reuse tables; quantise values and only format text when the shown value changes.
-- `lcd.invalidate()` only when something visible changed. Cache layout per window size.
+- Widget redraws: `wakeup` returns early when `lcd.isVisible()` is false (as the rfsuite dashboard does);
+  invalidate only the changed box rectangles with `lcd.invalidate(x, y, w, h)`, never the whole window,
+  except once when the screen comes back into view; hold redraws while a touch slide is in progress.
+  Cache layout per window size. `trackside.DEBUG_PAINT = true` logs paints per second.
 - Core modules load eagerly in main.lua; UI-only code (the settings form) loads on first use.
 - `main.lua` prints `[trackside] boot <s>, RAM <KB>`; check it after changes. Watch
   `system.getInstructionsUsage()` if a callback does heavy work (the script is killed at 100).
