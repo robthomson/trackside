@@ -1,10 +1,10 @@
 --[[
-  Drive-aid core. Shared by the Drive / StrMul sources, the Trackside widget
-  and the settings tool.
+  Drive-aid core. Shared by the Throttle Aid / Steer Aid sources and the
+  Trackside widget.
 
   Model mixes keep a raw stick ADD line and multiply it by our output:
-      throttle channel: Throttle (ADD) x Drive  (MULTIPLY)
-      steering channel: Steering (ADD) x StrMul (MULTIPLY)
+      throttle channel: Throttle (Add) x Throttle Aid (Multiply)
+      steering channel: Steering (Add) x Steer Aid (Multiply)
   If the script stops, the stick still drives the car directly.
 
   Processing order (fixed):

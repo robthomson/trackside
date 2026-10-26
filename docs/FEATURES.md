@@ -8,7 +8,7 @@ Status key: ☐ not started · ◐ scaffolded · ☑ done
 
 | Part | How it works | Status |
 | --- | --- | --- |
-| Drive aids output | Lua sources `Drive` (`tsDrv`) and `StrMul` (`tsStr`), enabled under Model → Lua | ◐ |
+| Drive aids output | Lua sources `Throttle Aid` (`tsDrv`) and `Steer Aid` (`tsStr`), enabled under Model → Lua | ◐ |
 | Mixing | Stick line (Add) + Lua source line (Multiply) per channel; confirmed in the VX10 sim | ☑ |
 | Inputs | Throttle Input / Steering Input source pickers (default: VX10 physical `Throttle` / `Steering`), so no feedback loop through the mixer | ☑ |
 | Dashboard | Widget `Trackside` (`tshome`) on any layout; header row only in full screen | ◐ |

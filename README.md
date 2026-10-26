@@ -13,7 +13,7 @@ aim is to build on it, using the VX10's colour touch screen and Ethos. See [docs
 
 | Part | Ethos item | What it does |
 | --- | --- | --- |
-| `Drive`, `StrMul` | Lua sources | Multipliers used on Multiply mix lines for throttle and steering |
+| Throttle Aid, Steer Aid | Lua sources | Multipliers used on Multiply mix lines for throttle and steering |
 | Trackside | Widget | Race dashboard: pack, laps, aid letters, live throttle/brake/steer scope |
 | Settings | Widget Configure page | BRK / DRV / SET / VOLT settings, saved per model |
 

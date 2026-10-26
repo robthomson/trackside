@@ -3,7 +3,8 @@
   Phase 1 feature spec: docs/FEATURES.md.
 
   Registers:
-    - Lua sources "Drive" and "StrMul": multipliers used on MULTIPLY mix lines
+    - Lua sources "Throttle Aid" and "Steer Aid": multipliers used
+      on Multiply mix lines for the throttle and steering channels
     - Widget "Trackside": the race dashboard
     - Settings (BRK / DRV / SET / VOLT) on the widget's Configure page
 ]]
@@ -36,10 +37,10 @@ function trackside.getForm()
     return trackside.form
 end
 
-local function sourceDrive()
+local function sourceThrottle()
     return {
         key = "tsDrv",
-        name = "Drive",
+        name = "Throttle Aid",
         init = function(source)
             source:decimals(2)
             source:value(1.0)
@@ -51,10 +52,10 @@ local function sourceDrive()
     }
 end
 
-local function sourceStrMul()
+local function sourceSteering()
     return {
         key = "tsStr",
-        name = "StrMul",
+        name = "Steer Aid",
         init = function(source)
             source:decimals(2)
             source:value(1.0)
@@ -67,8 +68,9 @@ local function sourceStrMul()
 end
 
 local function init()
-    system.registerSource(sourceDrive())
-    system.registerSource(sourceStrMul())
+    -- Keys are saved in models: never change them.
+    system.registerSource(sourceThrottle())
+    system.registerSource(sourceSteering())
     system.registerWidget(load("widget/home.lua"))
     print(string.format("[trackside] boot %.3fs, RAM %d KB", os.clock() - bootAt, math.floor(collectgarbage("count"))))
 end

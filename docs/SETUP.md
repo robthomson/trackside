@@ -9,7 +9,7 @@ Copy `src/trackside/` to `SCRIPTS/trackside/` on the radio (or use the VS Code *
 
 ## 2. Enable the Lua sources
 
-**Model → Lua** (page 2): turn **Drive** and **StrMul** ON.
+**Model → Lua** (page 2): turn **Throttle Aid** and **Steer Aid** ON.
 Ethos only lists Lua sources in pickers once they're enabled for the model.
 
 ## 3. Mixes
@@ -19,8 +19,8 @@ Free mix per channel, directly after it:
 
 | After | Source | Operation | Weight | Channel |
 | --- | --- | --- | --- | --- |
-| Throttle | Lua → **Drive** | **Multiply** | 100% | the throttle channel |
-| Steering | Lua → **StrMul** | **Multiply** | 100% | the steering channel |
+| Throttle | Lua → **Throttle Aid** | **Multiply** | 100% | the throttle channel |
+| Steering | Lua → **Steer Aid** | **Multiply** | 100% | the steering channel |
 
 Use exactly one Multiply line per channel. A second one multiplies twice.
 Put any reverse on the original stick line, not on the Multiply line.

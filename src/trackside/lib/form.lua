@@ -2,7 +2,7 @@
   Settings form for the Trackside widget's Configure page.
   One expansion panel per tab: BRK, DRV, SET, VOLT.
   Values are per model (SCRIPTS:/trackside.user/models/), not per widget, because
-  the Drive / StrMul sources need them even when no widget is on screen.
+  the Throttle Aid / Steer Aid sources need them even when no widget is on screen.
 ]]
 
 local settings = trackside.settings
