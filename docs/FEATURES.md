@@ -13,7 +13,7 @@ Status key: ☐ not started · ◐ scaffolded · ☑ done
 | Fail-safe | Trackside creates a DIY telemetry sensor `Trackside` (appId 0x5E10) and sends 1 every second. Logic switch LS1 (`Trackside > 0`) is the Active condition of both Multiply lines. Measured in the sim: scripts missing → stick 1:1 from boot; script stops → stick 1:1 after ~5 s; Lua error → sources send ×1.0 at once. The sensor and LS1 stay in the model when the scripts are missing | ☑ |
 | Inputs | Throttle Input / Steering Input source pickers (default: VX10 physical `Throttle` / `Steering`), so no feedback loop through the mixer | ☑ |
 | Dashboard | Widget `Trackside` (`tshome`) on any layout; header row only in full screen | ◐ |
-| Settings | System tool `Trackside`: tile menu (Settings, Diagnostics), one page per group; opening it from the dashboard: ☐ | ◐ |
+| Settings | System tool `Trackside`: tile menu (Settings, Diagnostics), one page per group; tap the aid letters on the dashboard to open it | ☑ |
 | Aids Switch | Drive aids page, switch picker (switch positions, logic switches). Off = every aid ×1.0, flags cleared, letters struck through. Not set = always on. Measured: SA↑ ×0.5 → 25%, SA- / SA↓ → 50% (stick 1:1). LS1 is still needed for a missing script | ☑ |
 | Check setup | Tool page: sensor and aid status, Aid Test (both aids ×0.5 while open, max 60 s) with a per-channel verdict. Verified in the sim on a good setup, a missing line and Operation Add | ☑ |
 | Storage | Per-model file `SCRIPTS:/trackside.user/models/<model>.lua` | ☑ |
@@ -106,7 +106,8 @@ Suggested first-session map: ABS Static, 12 Hz, Floor 40%, Pulse 50 ms, Trigger 
 | Battery | Pack voltage + cell count, cell V, battery %, min pack V, state (OFF/NOTEL/OK/LOW/ALARM) | ◐ |
 | Laps | Current lap (CUR), last lap (L1), best (green 3 s after a new best), lap count; reset bar along CUR | ☑ |
 | Footer | A T S C D letters (own colour = working, white = armed, grey = OFF, struck through = Aids Switch off), or session countdown when Show Timer = ON (grey paused, red blinking when expired) | ☑ |
-| Battery highlight | Colour change on LOW / flashing on ALARM | ☐ |
+| Battery highlight | PACK value amber on LOW; box flashes red (0.5 s) on ALARM | ☑ |
+| Touch | Tap lap boxes → lap view (LAPS / BEST / AVG / TOT + every lap, best green), tap to close; tap the aid letters → Trackside tool (`system.openPage` with the tool's handle, Ethos 26.1+). Only still taps count, swipes pass to Ethos | ☑ |
 
 ## Live scope bar
 
@@ -122,7 +123,7 @@ trigger depth (ABS armed); raw-stick marker when aids are shaping it; tick under
   is stamped as a lap first (laps must be timed at the press); the reset then clears it. ☑
 - Timer: short press start/pause/restart; long hold 1.2 s resets. "One minute", "Time up", then haptic every 10 s
   for a minute. ☑
-- A lap view with more laps + AVG / TOT / LAPS / BEST. ☐
+- A lap view with every lap + AVG / TOT / LAPS / BEST: tap the lap boxes. ☑
 
 Measured in the sim (lib/laps.lua): presses 4.9 / 4.2 s apart → "4.8 seconds", "Best lap, 4.2 seconds"; a press
 2.3 s after a lap ignored; next lap timed from the last counted lap (8.1 s); 1-minute countdown → "Time up" at

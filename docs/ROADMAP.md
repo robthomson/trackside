@@ -23,13 +23,12 @@ Spec and checklist: [FEATURES.md](FEATURES.md).
 1. ~~Drive-aid core~~ Done in the sim: all five aids, measured on the channel outputs. The ~20 ms Lua update
    limits ABS to about 10–15 Hz; check the rate on a real VX10 and cap the range if needed.
 2. ~~Verify multiplier scale~~ Done: sources output on the mixer's 1024 = 100% scale; 0.5 halves the channel.
-3. ~~Laps + session timer~~ Done: debounce, reset hold, haptics, spoken lap times. Still to do: a lap view (AVG / TOT).
-4. ~~Battery~~ Mostly done: cells, %, fuel estimate (Pack Fuel sensor), spoken alarm with haptic. Still to do: PACK
-   box colour/flash on LOW / ALARM.
+3. ~~Laps + session timer~~ Done: debounce, reset hold, haptics, spoken lap times, lap view (tap the lap boxes).
+4. ~~Battery~~ Done: cells, %, fuel estimate (Pack Fuel sensor), spoken alarm with haptic, PACK amber / flashing red.
 5. **Telemetry** for the top bar: LQ, SNR, TX voltage, TX power (ELRS and FrSky names).
-6. **Dashboard**: boxes, timer footer and new-best flash done. Still to do: PACK highlight on LOW / ALARM.
-7. **Settings from the dashboard**: settings now live in the Trackside system tool (with Check setup).
-   Still to do: open it from the dashboard, with the live scope bar on Brake / ABS, Drive aids and Inputs.
+6. ~~Dashboard~~ Done: all boxes, timer footer, new-best flash, PACK alarm highlight, lap view.
+7. ~~Settings from the dashboard~~ Done: tap the aid letters to open the Trackside tool. Later: a live scope bar on
+   the Brake / ABS, Drive aids and Inputs pages.
 8. Bench and track test on a real VX10.
 
 ## Phase 2 — dashboard engine
@@ -77,5 +76,6 @@ Full report: [RESEARCH.md](RESEARCH.md). What it changes for us:
 ## Open questions
 
 - Lua source `wakeup` rate on the VX10 (drives max ABS frequency).
-- Whether Ethos lets a widget open a full-screen settings page directly, or we draw the tabs ourselves.
+- ~~Whether a widget can open a settings page~~ Yes: `system.openPage({system = handle})` (Ethos 26.1+), with the handle
+  `system.registerSystemTool()` returns.
 - Sensor names to look up for LQ / TX power across ELRS, FrSky ACCESS/ACCST and others.

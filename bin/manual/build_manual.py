@@ -406,7 +406,8 @@ def build():
         ["Area", "Shows"],
         ["Header (full screen)", "Model name, link quality (LQ), radio battery (TX) and transmit power (PWR)."],
         ["PACK", "Car pack voltage, with the detected cell count (for example 2S) in the corner. "
-                 "Green above 50%, amber below 50%, red below 20%."],
+                 "Green above 50% fuel, amber below 50%, red below 20%. With Voltage Alarm ON: amber while the "
+                 "cells are under the alarm level, and the box flashes red once the alarm goes off."],
         ["CELL / BATT / MIN", "Voltage per cell, fuel left (see below), and the lowest pack voltage this session."],
         ["CUR / L1 / BEST / LAP", "Lap timing: current lap, last lap, best lap (green for 3 s after a new best) "
                                   "and lap count."],
@@ -416,6 +417,16 @@ def build():
         ["Live bar", "Throttle (green) or brake (red) from the centre line. The small mark below shows the wheel position."],
     ], [42 * mm, 128 * mm]))
     story.append(p("Telemetry values show <b>--</b> until the receiver sends them."))
+    story.append(p("Touch the dashboard", "h2"))
+    story.append(table([
+        ["Tap", "Opens"],
+        ["The lap boxes (CUR, L1, BEST, LAP)", "The lap view: every lap of the session, best in green, with LAPS, BEST, "
+         "AVG and TOT. Tap anywhere to go back."],
+        ["The aid letters", "The Trackside tool (needs Ethos 26.1 or later)."],
+    ], [58 * mm, 112 * mm]))
+    story.append(p("Swiping between screens works as usual: only a tap that doesn't move counts."))
+    story.append(pair("32-lap-view", "Lap view: 6 laps, best 3.66",
+                      "33-dash-alarm", "Battery alarm: the PACK box flashes red"))
     story.append(p("Fuel (BATT)", "h2"))
     story.append(table([
         ["Source", "Used when", "How it works"],
