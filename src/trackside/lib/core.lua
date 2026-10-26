@@ -5,7 +5,9 @@
   Model mixes keep a raw stick ADD line and multiply it by our output:
       throttle channel: Throttle (Add) x Throttle Aid (Multiply)
       steering channel: Steering (Add) x Steer Aid (Multiply)
-  If the script stops, the stick still drives the car directly.
+  If the script is missing or stops, the Trackside sensor goes lost, LS1 (the
+  lines' Active condition) turns off and the stick drives the car. On a Lua error the
+  sources send x1.0 (see main.lua).
 
   Processing order (fixed):
       Traction Control -> Steer Cut Throttle -> Corner Brake -> ABS -> Steer Limit
@@ -22,6 +24,18 @@ local core = {}
 core.input = { thr = 0, steer = 0 }          -- raw sticks, -1..1
 core.proc = { thr = 0, steer = 0 }           -- after the aid pipeline, -1..1
 core.out = { drive = 1.0, strmul = 1.0 }     -- multipliers for the mixes
+core.ok = true                               -- false if the last update() raised an error
+core.aidsOn = true                           -- false while the Aids Switch is off
+
+-- Aid Test (Check setup page): both aids send TEST_MUL so the user can see the
+-- channels move half as far. Ends by itself after TEST_MAX seconds.
+local TEST_MUL = 0.5
+local TEST_MAX = 60
+core.testUntil = nil
+core.testExpired = false     -- set when the test times out (alerts says so)
+function core.setTest(on)
+    core.testUntil = on and (os.clock() + TEST_MAX) or nil
+end
 core.flags = { A = false, T = false, S = false, C = false, D = false }
 
 local STICK_MAX = 1024
@@ -58,6 +72,7 @@ function core.update()
     if lastTick and now - lastTick < MIN_STEP then return end
     st.dt = lastTick and (now - lastTick) or 0
     lastTick = now
+    core.ok = false     -- set again only if the whole pipeline finishes
 
     settings.ensureModel()
 
@@ -72,9 +87,28 @@ function core.update()
     absStage(st, now)
     steerLimit(st)
 
-    core.proc.thr, core.proc.steer = st.thr, st.steer
-    core.out.drive = ratio(st.thr, thr)
-    core.out.strmul = ratio(st.steer, steer)
+    -- Aids Switch off: the sticks pass straight through and no aid shows active.
+    local sw = settings.source("aidsSrc")
+    core.aidsOn = not sw or sw:state() == true
+    if core.aidsOn then
+        core.proc.thr, core.proc.steer = st.thr, st.steer
+        core.out.drive = ratio(st.thr, thr)
+        core.out.strmul = ratio(st.steer, steer)
+    else
+        local fl = core.flags
+        fl.A, fl.T, fl.S, fl.C, fl.D = false, false, false, false, false
+        core.proc.thr, core.proc.steer = thr, steer
+        core.out.drive, core.out.strmul = 1.0, 1.0
+    end
+    if core.testUntil then
+        if now < core.testUntil then
+            core.out.drive, core.out.strmul = TEST_MUL, TEST_MUL
+        else
+            core.testUntil = nil
+            core.testExpired = true
+        end
+    end
+    core.ok = true
 end
 
 return core

@@ -15,17 +15,20 @@ local settings = { OFF = OFF }
 -- kind: "num"    number field (min/max/step, optional off)
 --       "choice" list of labels, value is 1-based index
 --       "source" Ethos source picker, stored as {category, member}
+--       "switch" Ethos switch picker (switch positions, logic switches), stored the same way
 settings.schema = {
     -- BRK - brake / ABS
-    { key = "absMode",       tab = "BRK",  label = "ABS Mode",          kind = "choice", choices = { "OFF", "STATIC", "DYNAMIC" }, default = 1 },
+    { key = "absMode",       tab = "BRK",  label = "ABS Mode",          kind = "choice", choices = { "OFF", "Static", "Dynamic" }, default = 1 },
     { key = "absFreq",       tab = "BRK",  label = "ABS Frequency",     kind = "num", min = 5,  max = 33,  step = 1, unit = "Hz", default = 5 },
     { key = "brakeFloor",    tab = "BRK",  label = "Brake Floor",       kind = "num", min = 0,  max = 100, step = 5, unit = "%",  default = 40 },
     { key = "pulseDelay",    tab = "BRK",  label = "Pulse Delay",       kind = "num", min = 0,  max = 100, step = 5, unit = "ms", default = 50 },
     { key = "absTrigger",    tab = "BRK",  label = "ABS Trigger",       kind = "num", min = 5,  max = 100, step = 5, unit = "%",  default = 30 },
-    { key = "dynTarget",     tab = "BRK",  label = "DYN Target",        kind = "num", min = 5,  max = 33,  step = 1, unit = "Hz", default = 6 },
-    { key = "dynMinDelay",   tab = "BRK",  label = "DYN Min Delay",     kind = "num", min = 5,  max = 100, step = 5, unit = "ms", default = OFF, off = true },
+    { key = "dynTarget",     tab = "BRK",  label = "Dynamic Target",    kind = "num", min = 5,  max = 33,  step = 1, unit = "Hz", default = 6 },
+    { key = "dynMinDelay",   tab = "BRK",  label = "Dynamic Min Delay", kind = "num", min = 5,  max = 100, step = 5, unit = "ms", default = OFF, off = true },
 
     -- DRV - drive / stability
+    -- Aids Switch: any switch; off = every aid sends x1.0. Not set = aids always on.
+    { key = "aidsSrc",       tab = "DRV",  label = "Aids Switch",       kind = "switch", default = nil },
     { key = "traction",      tab = "DRV",  label = "Traction Control",  kind = "num", min = 0,  max = 100, step = 5, unit = "%",  default = OFF, off = true },
     { key = "steerCut",      tab = "DRV",  label = "Steer Cut Throttle",kind = "num", min = 0,  max = 100, step = 5, unit = "%",  default = OFF, off = true },
     { key = "cornerBrake",   tab = "DRV",  label = "Corner Brake",      kind = "num", min = 0,  max = 100, step = 5, unit = "%",  default = OFF, off = true },
@@ -34,27 +37,44 @@ settings.schema = {
     { key = "steerLimit",    tab = "DRV",  label = "Steer Limit",       kind = "num", min = 0,  max = 100, step = 5, unit = "%",  default = OFF, off = true },
     { key = "steerLimitStart",tab = "DRV", label = "Steer Limit Start", kind = "num", min = 0,  max = 100, step = 5, unit = "%",  default = 50 },
 
-    -- SET - setup / radio choices
-    { key = "throttleSrc",   tab = "SET",  label = "Throttle Input",    kind = "source", default = { "ANALOG", 1 } },
-    { key = "steerSrc",      tab = "SET",  label = "Steering Input",    kind = "source", default = { "ANALOG", 0 } },
-    { key = "brakeDir",      tab = "SET",  label = "Brake Direction",   kind = "choice", choices = { "NEG", "POS" }, default = 1 },
-    { key = "graphDir",      tab = "SET",  label = "Graph Direction",   kind = "choice", choices = { "NOR", "REV" }, default = 1 },
-    { key = "timer",         tab = "SET",  label = "Timer",             kind = "num", min = 1,  max = 45,  step = 1, unit = "min", default = 5 },
-    { key = "timerSrc",      tab = "SET",  label = "Timer Switch",      kind = "source", default = nil },
-    { key = "showTimer",     tab = "SET",  label = "Show Timer",        kind = "choice", choices = { "OFF", "ON" }, default = 1 },
-    { key = "lapSrc",        tab = "SET",  label = "Lap Switch",        kind = "source", default = nil },
-    { key = "lapHaptic",     tab = "SET",  label = "Laptimer Haptic",   kind = "choice", choices = { "OFF", "ON" }, default = 2 },
-    { key = "throttleStartLap", tab = "SET", label = "Throttle Start Lap", kind = "choice", choices = { "OFF", "ON" }, default = 1 },
+    -- IN - inputs and the channels the aids drive
+    { key = "throttleSrc",   tab = "IN",   label = "Throttle Input",    kind = "source", default = { "ANALOG", 1 } },
+    { key = "steerSrc",      tab = "IN",   label = "Steering Input",    kind = "source", default = { "ANALOG", 0 } },
+    -- Only used by Check setup to compare input and channel output.
+    { key = "throttleCh",    tab = "IN",   label = "Throttle Channel",  kind = "source", default = { "CHANNEL", 1 } },
+    { key = "steerCh",       tab = "IN",   label = "Steering Channel",  kind = "source", default = { "CHANNEL", 0 } },
+    { key = "brakeDir",      tab = "IN",   label = "Brake Direction",   kind = "choice", choices = { "Negative", "Positive" }, default = 1 },
+    { key = "graphDir",      tab = "IN",   label = "Graph Direction",   kind = "choice", choices = { "Normal", "Reversed" }, default = 1 },
 
-    -- VOLT - battery alarm
+    -- LAP - timer and laps
+    { key = "timer",         tab = "LAP",  label = "Timer",             kind = "num", min = 1,  max = 45,  step = 1, unit = "min", default = 5 },
+    { key = "timerSrc",      tab = "LAP",  label = "Timer Switch",      kind = "source", default = nil },
+    { key = "showTimer",     tab = "LAP",  label = "Show Timer",        kind = "choice", choices = { "OFF", "ON" }, default = 1 },
+    { key = "lapSrc",        tab = "LAP",  label = "Lap Switch",        kind = "source", default = nil },
+    { key = "lapHaptic",     tab = "LAP",  label = "Lap Haptic",        kind = "choice", choices = { "OFF", "ON" }, default = 2 },
+    { key = "throttleStartLap", tab = "LAP", label = "Throttle Start Lap", kind = "choice", choices = { "OFF", "ON" }, default = 1 },
+
+    -- VOLT - battery: alarm and fuel
     { key = "battType",      tab = "VOLT", label = "Battery Type",      kind = "choice", choices = { "LiPo", "LiHV" }, default = 1 },
     { key = "cells",         tab = "VOLT", label = "Cells",             kind = "choice", choices = { "Auto", "1S", "2S", "3S", "4S", "5S", "6S" }, default = 1 },
-    { key = "voltAlarm",     tab = "VOLT", label = "Volt Alarm",        kind = "choice", choices = { "OFF", "ON" }, default = 1 },
+    { key = "voltAlarm",     tab = "VOLT", label = "Voltage Alarm",     kind = "choice", choices = { "OFF", "ON" }, default = 1 },
     -- centivolts: 320 = 3.20 V
     { key = "alarmCell",     tab = "VOLT", label = "Alarm Cell Voltage",kind = "num", min = 320, max = 390, step = 5, unit = "V", decimals = 2, default = 350 },
+    -- Fuel by mAh used (needs a consumption sensor). OFF = estimate from voltage.
+    { key = "packCapacity",  tab = "VOLT", label = "Pack Capacity",     kind = "num", min = 500, max = 10000, step = 100, unit = "mAh", default = OFF, off = true },
+    -- "Fuel <n> percent" at 50, 30, 20 and 10 (lib/alerts.lua).
+    { key = "fuelCallouts",  tab = "VOLT", label = "Fuel Callouts",     kind = "choice", choices = { "OFF", "ON" }, default = 2 },
 }
 
-settings.TABS = { "BRK", "DRV", "SET", "LAP", "VOLT" }
+-- Pages in the Trackside tool, in menu order (CHECK is the live check page).
+settings.PAGES = {
+    { id = "CHECK", title = "Check setup" },
+    { id = "BRK",   title = "Brake / ABS" },
+    { id = "DRV",   title = "Drive aids" },
+    { id = "IN",    title = "Inputs" },
+    { id = "LAP",   title = "Timer & laps" },
+    { id = "VOLT",  title = "Battery" },
+}
 
 settings.byKey = {}
 for _, s in ipairs(settings.schema) do
@@ -128,7 +148,7 @@ function settings.load()
     if not ok or type(saved) ~= "table" then return end
     for _, s in ipairs(settings.schema) do
         local v = saved[s.key]
-        if s.kind == "source" then
+        if s.kind == "source" or s.kind == "switch" then
             if type(v) == "table" and type(v[1]) == "number" and type(v[2]) == "number" then
                 settings.values[s.key] = { v[1], v[2] }
             elseif v == false then
@@ -154,7 +174,7 @@ function settings.save()
     f:write("return {\n")
     for _, s in ipairs(settings.schema) do
         local v = settings.values[s.key]
-        if s.kind == "source" then
+        if s.kind == "source" or s.kind == "switch" then
             -- false = explicitly cleared, so the default source is not restored
             if v then
                 f:write("  ", s.key, " = { ", v[1], ", ", v[2], " },\n")

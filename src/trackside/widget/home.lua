@@ -71,7 +71,7 @@ end
 
 -- Battery % colour: green, amber under 50%, red under 20%.
 local function battColor()
-    local p = battery.pct
+    local p = trackside.fuel.pct
     if not p then return nil end
     if p < 20 then return C.brake elseif p < 50 then return C.warn end
     return C.throttle
@@ -95,7 +95,7 @@ local boxes = {
       src = function() return battery.pack end, q = 0.01, pattern = "%.2fV",
       sub = cellsLabel, subPattern = "%dS" },
     { c = 0, r = 4, w = 2, h = 2, title = "CELL", src = function() return battery.cell end, q = 0.01, pattern = "%.2f" },
-    { c = 2, r = 4, w = 2, h = 2, title = "BATT", color = battColor, src = function() return battery.pct end, q = 1, pattern = "%d%%" },
+    { c = 2, r = 4, w = 2, h = 2, title = "BATT", color = battColor, src = function() return trackside.fuel.pct end, q = 1, pattern = "%d%%" },
     { c = 4, r = 4, w = 2, h = 2, title = "MIN", src = function() return battery.min end, q = 0.01, pattern = "%.2f" },
 
     -- right: laps (lap timer not built yet)
@@ -211,17 +211,37 @@ end
 
 local LETTERS = { "A", "T", "S", "C", "D" }
 
+-- An aid is armed when its setting isn't OFF.
+local function armed(l)
+    if l == "A" then return settings.get("absMode") ~= 1 end
+    if l == "T" then return not settings.isOff("traction") end
+    if l == "S" then return not settings.isOff("steerCut") end
+    if l == "C" then return not (settings.isOff("cornerBrake") and settings.isOff("cornerAbsHz")) end
+    return not settings.isOff("steerLimit")
+end
+
+-- Letter colours: its own colour while working, white when armed,
+-- dark grey when OFF. Aids Switch off: all dark grey, struck through.
 local function drawLetters(b)
     local x, y, w, h = b.x, b.y, b.w, b.h
     lcd.color(C.box)
     lcd.drawFilledRectangle(x, y, w, h)
     lcd.font(FONT_XL)
+    local on = core.aidsOn
     local cell = w / #LETTERS
     for i = 1, #LETTERS do
         local l = LETTERS[i]
-        lcd.color(core.flags[l] and C.letter[l] or C.off)
+        local c = C.off
+        if on then
+            if core.flags[l] then c = C.letter[l] elseif armed(l) then c = C.text end
+        end
+        lcd.color(c)
         local tw, th = lcd.getTextSize(l)
         lcd.drawText(x + floor((i - 0.5) * cell - tw / 2), y + floor((h - th) / 2), l)
+    end
+    if not on then
+        lcd.color(C.warn)
+        lcd.drawFilledRectangle(x + 8, y + floor(h / 2) - 1, w - 16, 3)
     end
 end
 
@@ -236,7 +256,7 @@ local function drawScope(b)
     local half = floor(w / 2) - 8
 
     local thr = core.proc.thr
-    -- Brake Direction: NEG (1) means negative stick is brake
+    -- Brake Direction: Negative (1) means negative stick is brake
     local braking = (settings.get("brakeDir") == 1) == (thr < 0)
     lcd.color(braking and C.brake or C.throttle)
     local len = floor(abs(thr) * half)
@@ -270,9 +290,15 @@ local function create()
              visible = false, slidingUntil = 0, full = true, pending = {} }
 end
 
+-- Everything the letters box shows, as one number (redraw only on change).
 local function flagKey()
     local f = core.flags
-    return (f.A and 1 or 0) + (f.T and 2 or 0) + (f.S and 4 or 0) + (f.C and 8 or 0) + (f.D and 16 or 0)
+    local k = (f.A and 1 or 0) + (f.T and 2 or 0) + (f.S and 4 or 0) + (f.C and 8 or 0) + (f.D and 16 or 0)
+    for i = 1, #LETTERS do
+        if armed(LETTERS[i]) then k = k + 32 * 2 ^ (i - 1) end
+    end
+    if not core.aidsOn then k = k + 1024 end
+    return k
 end
 
 -- Queue one box for redraw. Boxes are only invalidated as rectangles, never the
@@ -318,7 +344,7 @@ local function wakeup(widget)
 
     if now - widget.textAt >= TEXT_EVERY then
         widget.textAt = now
-        battery.update()
+        trackside.background()
         for i = 1, #boxes do
             local b = boxes[i]
             if b.src or b.sub or b.color then
@@ -390,15 +416,10 @@ local function paint(widget)
     end
 end
 
--- Configure page: all Trackside settings (saved per model, not per widget).
--- The form module is only loaded the first time Configure opens.
+-- Settings live in the Trackside system tool (per model, not per widget).
 local function configure(widget)
-    settings.ensureModel(true)
-    trackside.getForm().build()
-end
-
-local function write(widget)
-    trackside.getForm().save()
+    local line = form.addLine("Settings")
+    form.addStaticText(line, nil, "System > Trackside")
 end
 
 return {
@@ -409,6 +430,5 @@ return {
     paint = paint,
     event = event,
     configure = configure,
-    write = write,
     title = false,
 }

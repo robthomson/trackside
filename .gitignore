@@ -5,3 +5,4 @@ __pycache__/
 simulators/*
 
 .claude/settings.local.json
+bin/audio/.cache/

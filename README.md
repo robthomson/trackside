@@ -14,19 +14,28 @@ aim is to build on it, using the VX10's colour touch screen and Ethos. See [docs
 | Part | Ethos item | What it does |
 | --- | --- | --- |
 | Throttle Aid, Steer Aid | Lua sources | Multipliers used on Multiply mix lines for throttle and steering |
+| Pack Fuel | Telemetry sensor (created automatically) | Fuel % from mAh used or resting voltage, when the car has no fuel sensor |
+| Trackside | Telemetry sensor (created automatically) | Reads 1 while Trackside runs; logic switch LS1 uses it to turn the Multiply lines off if Trackside stops |
 | Trackside | Widget | Race dashboard: pack, laps, aid letters, live throttle/brake/steer scope |
-| Settings | Widget Configure page | BRK / DRV / SET / VOLT settings, saved per model |
+| Trackside | System tool | Settings (Brake / ABS, Drive aids, Inputs, Timer & laps, Battery), saved per model, and Check setup with the Aid Test |
 
 ## Layout
 
 ```
 src/trackside/         -> deployed to SCRIPTS/trackside/ on the radio
-  main.lua             registers the sources and the widget
+  main.lua             registers the sources, the widget and the system tool
   lib/settings.lua     settings schema (ranges/defaults) + per-model save
   lib/core.lua         drive-aid pipeline (stubs for now)
-  lib/form.lua         settings form for the widget Configure page (loaded on first open)
+  lib/form.lua         settings fields generated from the schema (loaded on first use)
+  tool/app.lua         Trackside system tool: menu, settings pages, Check setup
+  tool/gfx/            tool icons (made by bin/icons/make_icons.py)
   lib/telemetry.lua    sensor values (simulator file or real sensors)
   lib/battery.lua      cell count, cell V, %, session minimum
+  lib/fuel.lua         fuel %: fuel sensor, else mAh used, else resting voltage
+  lib/diysensor.lua    telemetry sensors Trackside creates (Trackside, Pack Fuel)
+  lib/audio.lua        spoken phrases (user file, radio voice, en/default) and numbers
+  lib/alerts.lua       voltage alarm, fuel callouts, Aid Test announcements
+  audio/               generated WAVs (bin/audio/generate.py from bin/audio/phrases.json)
   widget/home.lua      Trackside dashboard
 bin/sensors/          simulator sensor tool
 bin/manual/           builds the setup guide PDF

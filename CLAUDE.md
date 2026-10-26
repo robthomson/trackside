@@ -13,7 +13,14 @@ Trackside: Ethos Lua race suite for the FrSky Velox VX10 (800×480 colour touch,
   throttle 50% x 1.0 = 50%, x 0.5 = 25%).
 - All scripts share one Lua state: the suite lives in the global `trackside` table.
 - Load files with absolute `SCRIPTS:/trackside/...` paths (see `trackside.BASE`).
-- Registration keys are max 7 chars and must never change after release (`tsDrv`, `tsStr`, `tshome`).
+- Registration keys are max 7 chars and must never change after release (`tsDrv`, `tsStr`, `tshome`). Telemetry sensor appIds `0x5E10` ("Trackside") and `0x5E11` ("Pack Fuel") are fixed too
+  (lib/diysensor.lua creates them).
+- A missing Lua source counts as 0 in a Multiply line (dead car). The Multiply lines therefore use LS1
+  (`Trackside sensor > 0`) as Active condition. main.lua creates the DIY sensor and pushes 1 every second;
+  Ethos marks it lost ~4 s after the last value. Mix Active conditions can't pick a Lua source directly.
+- Spoken audio: add phrases to `bin/audio/phrases.json`, run `python bin/audio/generate.py` (Google TTS; the
+  credentials are in the environment). `system.playNumber(value, unit, decimals)` takes the real value
+  (3.4, not 340) on Ethos 26.2.
 - Settings are per model in `SCRIPTS:/trackside.user/models/`, outside the deployed folder (deploy mirrors
   `src/trackside` and deletes stale files).
 

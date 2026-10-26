@@ -13,7 +13,7 @@ rfsuite dashboard engine.
   like rfsuite and wfsuite. Checked in the VX10 sim with both themes.
 - **Full screen vs windowed.** The header row (model, link, TX) only shows when the widget fills the screen;
   in a windowed layout Ethos already shows it (same rule as the rfsuite dashboard).
-- **Self-contained.** Settings live on the widget's own Configure page; no separate System tool.
+- **Self-contained.** One install: the sources, the dashboard widget and the `Trackside` system tool, which holds all settings.
 - **Glanceable while driving.** Big numbers, few of them, readable at arm's length outdoors.
 
 ## Phase 1 — core feature set
@@ -28,8 +28,8 @@ Spec and checklist: [FEATURES.md](FEATURES.md).
 4. **Battery** module: pack voltage/cells from telemetry, Auto cell lock, LiPo/LiHV %, STATE machine, alarm haptics.
 5. **Telemetry** for the top bar: LQ, SNR, TX voltage, TX power (ELRS and FrSky names).
 6. **Dashboard**: fill all boxes; PACK highlight; timer footer; new-best flash.
-7. **Settings from the dashboard**: ENTER/touch opens the tabs (BRK/DRV/SET/LAP/VOLT) over the dash, with the live
-   scope bar on BRK/DRV/SET.
+7. **Settings from the dashboard**: ENTER/touch opens the Trackside tool's pages over the dash, with the
+   live scope bar on Brake / ABS, Drive aids and Inputs.
 8. Bench and track test on a real VX10.
 
 ## Phase 2 — dashboard engine
