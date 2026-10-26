@@ -48,10 +48,12 @@ settings.schema = {
 
     -- LAP - timer and laps
     { key = "timer",         tab = "LAP",  label = "Timer",             kind = "num", min = 1,  max = 45,  step = 1, unit = "min", default = 5 },
-    { key = "timerSrc",      tab = "LAP",  label = "Timer Switch",      kind = "source", default = nil },
+    { key = "timerSrc",      tab = "LAP",  label = "Timer Switch",      kind = "switch", default = nil },
     { key = "showTimer",     tab = "LAP",  label = "Show Timer",        kind = "choice", choices = { "OFF", "ON" }, default = 1 },
-    { key = "lapSrc",        tab = "LAP",  label = "Lap Switch",        kind = "source", default = nil },
+    { key = "lapSrc",        tab = "LAP",  label = "Lap Switch",        kind = "switch", default = nil },
     { key = "lapHaptic",     tab = "LAP",  label = "Lap Haptic",        kind = "choice", choices = { "OFF", "ON" }, default = 2 },
+    -- Speaks each lap time ("Best lap" first on a new best).
+    { key = "lapCallout",    tab = "LAP",  label = "Lap Callout",       kind = "choice", choices = { "OFF", "ON" }, default = 2 },
     { key = "throttleStartLap", tab = "LAP", label = "Throttle Start Lap", kind = "choice", choices = { "OFF", "ON" }, default = 1 },
 
     -- VOLT - battery: alarm and fuel

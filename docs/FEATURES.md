@@ -81,12 +81,13 @@ A letter lights only while its aid changes the output; armed aids show white, OF
 | Inputs | Throttle Input / Steering Input | any source | VX10 Throttle / Steering |
 | Inputs | Throttle Channel / Steering Channel | any channel (used by Check setup) | CH2 / CH1 |
 | Timer & laps | Timer | 1–45 min | 5 min |
-| Timer & laps | Timer Switch | any source | — |
+| Timer & laps | Timer Switch | switch position / logic switch | — |
 | Timer & laps | Show Timer | OFF / ON (footer: timer vs A T S C D) | OFF |
 | Inputs | Brake Direction | Negative / Positive | Negative |
 | Inputs | Graph Direction | Normal / Reversed (scope only) | Normal |
-| Timer & laps | Lap Switch | any source | — |
+| Timer & laps | Lap Switch | switch position / logic switch | — |
 | Timer & laps | Lap Haptic | OFF / ON | ON |
+| Timer & laps | Lap Callout | OFF / ON (speaks each lap time) | ON |
 | Timer & laps | Throttle Start Lap | OFF / ON | OFF |
 | Battery | Battery Type | LiPo (4.20 V full) / LiHV (4.35 V full); empty ≈ 3.50 V | LiPo |
 | Battery | Cells | Auto, 1S–6S (Auto locks on first valid pack, unlocks after ~5 s telemetry loss) | Auto |
@@ -103,8 +104,8 @@ Suggested first-session map: ABS Static, 12 Hz, Floor 40%, Pulse 50 ms, Trigger 
 | --- | --- | --- |
 | Header (full screen only) | Model name, LQ (0–100), SNR, TX voltage, TX power mW | ◐ |
 | Battery | Pack voltage + cell count, cell V, battery %, min pack V, state (OFF/NOTEL/OK/LOW/ALARM) | ◐ |
-| Laps | Current lap, last laps, lap count, best (flashes on new best) | ◐ |
-| Footer | A T S C D letters (own colour = working, white = armed, grey = OFF, struck through = Aids Switch off), or session countdown when Show Timer = ON (blinks when expired) | ◐ |
+| Laps | Current lap (CUR), last lap (L1), best (green 3 s after a new best), lap count; reset bar along CUR | ☑ |
+| Footer | A T S C D letters (own colour = working, white = armed, grey = OFF, struck through = Aids Switch off), or session countdown when Show Timer = ON (grey paused, red blinking when expired) | ☑ |
 | Battery highlight | Colour change on LOW / flashing on ALARM | ☐ |
 
 ## Live scope bar
@@ -115,10 +116,17 @@ trigger depth (ABS armed); raw-stick marker when aids are shaping it; tick under
 
 ## Laps & timer
 
-- Lap from Lap Switch; minimum lap 3 s (debounce). Throttle Start Lap starts the clock on throttle.
-- Lap Haptic on each new lap. Dashboard shows recent laps; a lap view shows more + AVG / TOT / LAPS / BEST.
-- Long hold (~1.2 s, progress bar) on the lap control resets the session.
-- Timer: short press start/pause/restart; long hold ~1.2 s resets. Haptic at zero always on (~3 s bursts with quiet gaps).
+- Lap from Lap Switch; minimum lap 3 s (debounce). Throttle Start Lap starts the clock on throttle. ☑
+- Lap Haptic on each new lap; Lap Callout speaks the time ("Best lap" first on a new best). ☑
+- Long hold (1.2 s, progress bar along CUR) on the lap switch resets the session. The press that starts the hold
+  is stamped as a lap first (laps must be timed at the press); the reset then clears it. ☑
+- Timer: short press start/pause/restart; long hold 1.2 s resets. "One minute", "Time up", then haptic every 10 s
+  for a minute. ☑
+- A lap view with more laps + AVG / TOT / LAPS / BEST. ☐
+
+Measured in the sim (lib/laps.lua): presses 4.9 / 4.2 s apart → "4.8 seconds", "Best lap, 4.2 seconds"; a press
+2.3 s after a lap ignored; next lap timed from the last counted lap (8.1 s); 1-minute countdown → "Time up" at
+0:00 and buzzes at +10, +20, +30, +40 s.
 
 ## Fuel
 
@@ -142,7 +150,9 @@ decimals = digits spoken). Checked in the sim log (lib/alerts.lua):
 | "Aid test on/off" | Aid Test starts, ends or times out | ☑ |
 | "Drive aids on/off" + buzz | Aids Switch flipped (not at start-up) | ☑ |
 | "Drive aids off. Trackside error." + haptic | a Lua error released the aids | ☑ |
-| Lap / best lap / timer | with the lap timer | ☐ |
+| Lap time / "Best lap" + buzz | each lap (Lap Callout, Lap Haptic) | ☑ |
+| "One minute" / "Time up" + haptic | countdown at 1:00 and 0:00 | ☑ |
+| "Laps reset" / "Timer reset" | long hold on the lap / timer switch | ☑ |
 
 ## Battery alarm
 

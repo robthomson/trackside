@@ -5,5 +5,10 @@
   { "file": "aidtest_off.wav", "text": "Aid test off" },
   { "file": "aids_off.wav", "text": "Drive aids off. Trackside error." },
   { "file": "aids_enabled.wav", "text": "Drive aids on" },
-  { "file": "aids_disabled.wav", "text": "Drive aids off" }
+  { "file": "aids_disabled.wav", "text": "Drive aids off" },
+  { "file": "best_lap.wav", "text": "Best lap" },
+  { "file": "laps_reset.wav", "text": "Laps reset" },
+  { "file": "timer_reset.wav", "text": "Timer reset" },
+  { "file": "one_minute.wav", "text": "One minute" },
+  { "file": "time_up.wav", "text": "Time up" }
 ]

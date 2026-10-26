@@ -15,6 +15,7 @@ local core = trackside.core
 local settings = trackside.settings
 local telemetry = trackside.telemetry
 local battery = trackside.battery
+local laps = trackside.laps
 
 local floor, abs = math.floor, math.abs
 local format = string.format
@@ -77,6 +78,22 @@ local function battColor()
     return C.throttle
 end
 
+-- Lap times: "12.34" under a minute, "1:02.3" over. Long form for the big box.
+local function lapShort(t)
+    if t < 60 then return format("%.2f", t) end
+    return format("%d:%04.1f", floor(t / 60), t % 60)
+end
+local function lapLong(t)
+    return format("%d:%04.1f", floor(t / 60), t % 60)
+end
+
+local BEST_FLASH = 3.0      -- s the BEST box shows green after a new best
+local function bestColor()
+    local at = laps.bestAt
+    if at and os.clock() - at < BEST_FLASH then return C.throttle end
+    return nil
+end
+
 -- --- boxes -------------------------------------------------------------------
 -- src returns a number (or string) or nil; q = display step used for change
 -- detection; pattern formats the number. Text is rebuilt only on change.
@@ -98,11 +115,12 @@ local boxes = {
     { c = 2, r = 4, w = 2, h = 2, title = "BATT", color = battColor, src = function() return trackside.fuel.pct end, q = 1, pattern = "%d%%" },
     { c = 4, r = 4, w = 2, h = 2, title = "MIN", src = function() return battery.min end, q = 0.01, pattern = "%.2f" },
 
-    -- right: laps (lap timer not built yet)
-    { c = 6, r = 1, w = 6, h = 3, title = "CUR", font = FONT_XXL, src = function() return "0:00.0" end },
-    { c = 6, r = 4, w = 2, h = 2, title = "L1" },
-    { c = 8, r = 4, w = 2, h = 2, title = "BEST" },
-    { c = 10, r = 4, w = 2, h = 2, title = "LAP", src = function() return 0 end, q = 1, pattern = "%d" },
+    -- right: laps. CUR shows a bar while the lap switch is held towards a reset.
+    { c = 6, r = 1, w = 6, h = 3, title = "CUR", font = FONT_XXL, src = function() return laps.current() end,
+      q = 0.1, fmt = lapLong, progress = function() return laps.holdFrac end },
+    { c = 6, r = 4, w = 2, h = 2, title = "L1", src = function() return laps.last end, q = 0.01, fmt = lapShort },
+    { c = 8, r = 4, w = 2, h = 2, title = "BEST", color = bestColor, src = function() return laps.best end, q = 0.01, fmt = lapShort },
+    { c = 10, r = 4, w = 2, h = 2, title = "LAP", src = function() return laps.count end, q = 1, pattern = "%d" },
 
     -- footer: aid letters (or timer) + live scope
     { c = 0, r = 6, w = 6, h = 2, kind = "letters" },
@@ -134,7 +152,8 @@ local function refreshBox(b)
                 b.text = "--"
             elseif type(v) == "number" then
                 -- k * q keeps integers integral, so "%d" patterns are safe
-                b.text = format(b.pattern or "%s", b.q and k * b.q or v)
+                local n = b.q and k * b.q or v
+                b.text = b.fmt and b.fmt(n) or format(b.pattern or "%s", n)
             else
                 b.text = v
             end
@@ -146,6 +165,14 @@ local function refreshBox(b)
         if v ~= b.subKey then
             b.subKey = v
             b.subText = v and format(b.subPattern or "%s", v) or nil
+            changed = true
+        end
+    end
+    if b.progress then
+        local p = b.progress()
+        local k = p and floor(p * 20) or false
+        if k ~= b.progKey then
+            b.progKey = k
             changed = true
         end
     end
@@ -207,6 +234,32 @@ local function drawValueBox(b)
     else
         lcd.drawText(x + floor((w - tw) / 2), cy, b.text)
     end
+    if b.progKey then
+        -- hold-to-reset bar along the bottom
+        lcd.color(C.warn)
+        lcd.drawFilledRectangle(x + 4, y + h - 10, floor((w - 8) * math.min(1, b.progKey / 20)), 6)
+    end
+end
+
+-- Footer countdown (Show Timer = ON). Blinks once it has run out.
+local function timerText()
+    local left = laps.timerLeft or 0
+    local s = math.ceil(left)
+    return format("%d:%02d", floor(s / 60), s % 60)
+end
+
+local function drawTimer(b)
+    local x, y, w, h = b.x, b.y, b.w, b.h
+    lcd.color(C.box)
+    lcd.drawFilledRectangle(x, y, w, h)
+    if laps.timerExpired and floor(os.clock() * 2) % 2 == 1 then return end
+    lcd.font(FONT_XXL)
+    local c = C.text
+    if laps.timerExpired then c = C.brake elseif not laps.timerRunning then c = C.title end
+    lcd.color(c)
+    local t = timerText()
+    local tw, th = lcd.getTextSize(t)
+    lcd.drawText(x + floor((w - tw) / 2), y + floor((h - th) / 2), t)
 end
 
 local LETTERS = { "A", "T", "S", "C", "D" }
@@ -298,6 +351,11 @@ local function flagKey()
         if armed(LETTERS[i]) then k = k + 32 * 2 ^ (i - 1) end
     end
     if not core.aidsOn then k = k + 1024 end
+    if settings.get("showTimer") == 2 then
+        -- footer shows the countdown: redraw on each second, run state and blink
+        k = 4096 + math.ceil(laps.timerLeft or 0) * 8 + (laps.timerRunning and 1 or 0)
+            + (laps.timerExpired and (2 + floor(os.clock() * 2) % 2 * 4) or 0)
+    end
     return k
 end
 
@@ -335,6 +393,7 @@ local function wakeup(widget)
     end
 
     core.update()
+    laps.update()
     local now = os.clock()
 
     if now - widget.themeAt >= THEME_EVERY then
@@ -406,7 +465,7 @@ local function paint(widget)
         local b = boxes[i]
         if not (b.header and not layoutFull) then
             if b.kind == "letters" then
-                drawLetters(b)
+                if settings.get("showTimer") == 2 then drawTimer(b) else drawLetters(b) end
             elseif b.kind == "scope" then
                 drawScope(b)
             else
