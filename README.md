@@ -6,8 +6,33 @@ Phase 1 covers ABS, traction control,
 steer cut throttle, corner brake, steer limit, lap timer, session timer and battery alarm. After that the
 aim is to build on it, using the VX10's colour touch screen and Ethos. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-> **Status: bootstrap.** Loads and runs on the VX10 simulator. The drive aids are pass-through stubs, so
-> they don't change throttle or steering yet.
+> **Status: early.** Runs on the VX10 simulator; all five drive aids work there (measured on the channel
+> outputs). Not yet driven on a real VX10. Every aid is OFF in a new model.
+
+## Screenshots
+
+From the VX10 simulator.
+
+<table>
+  <tr>
+    <td><img src="docs/manual/images/22-dash-throttle.png" width="400" alt="Race dashboard"></td>
+    <td><img src="docs/manual/images/18-settings-overview.png" width="400" alt="Trackside tool menu"></td>
+  </tr>
+  <tr>
+    <td>Race dashboard: pack, fuel, laps, aid letters and a live throttle / brake / steering bar</td>
+    <td>The Trackside tool (System menu): settings per model, and Check setup</td>
+  </tr>
+  <tr>
+    <td><img src="docs/manual/images/29-check-ok.png" width="400" alt="Check setup with the Aid Test"></td>
+    <td><img src="docs/manual/images/20-settings-drv.png" width="400" alt="Drive aids settings"></td>
+  </tr>
+  <tr>
+    <td>Check setup: the Aid Test proves the mixes work, channel by channel</td>
+    <td>Drive aids, with an Aids Switch to turn them all on or off</td>
+  </tr>
+</table>
+
+Step-by-step setup with more screenshots: [docs/Trackside-Setup-Guide.pdf](docs/Trackside-Setup-Guide.pdf).
 
 ## What's in it
 
@@ -25,7 +50,7 @@ aim is to build on it, using the VX10's colour touch screen and Ethos. See [docs
 src/trackside/         -> deployed to SCRIPTS/trackside/ on the radio
   main.lua             registers the sources, the widget and the system tool
   lib/settings.lua     settings schema (ranges/defaults) + per-model save
-  lib/core.lua         drive-aid pipeline (stubs for now)
+  lib/core.lua         drive-aid pipeline: traction, steer cut, corner brake, ABS, steer limit
   lib/form.lua         settings fields generated from the schema (loaded on first use)
   tool/app.lua         Trackside system tool: menu, settings pages, Check setup
   tool/gfx/            tool icons (made by bin/icons/make_icons.py)
@@ -70,7 +95,8 @@ Short text version: [docs/SETUP.md](docs/SETUP.md). Rebuild the PDF with `python
 ### Simulated telemetry
 
 Run **Simulator: Sensors** (or `python bin/sensors/sensors.py`) while the simulator is running. It opens a
-window with sliders for link quality, TX power, pack voltage, current, ESC/motor temp and RPM, and writes
+window with sliders for link quality, TX power, pack voltage, current, mAh used, a fuel sensor (with a
+"fitted" tick box), ESC/motor temp and RPM, and writes
 them live to `SCRIPTS/trackside.user/sim/sensors.lua` in the simulator folder. The dashboard reads that file
 only when Ethos reports it's running in the simulator. Sensors are defined in
 [bin/sensors/sensors.xml](bin/sensors/sensors.xml).

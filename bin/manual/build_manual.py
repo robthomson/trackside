@@ -179,9 +179,9 @@ def build():
                    "The aids can only reduce them. If the Trackside scripts are missing, the safety switch from "
                    "section 4c turns the aid lines off and the car drives on the plain stick. If Trackside hits an "
                    "error, the aids let the stick straight through."))
-    story.append(box("<b>About this version.</b> The aids are set up and connected, but in version "
-                     f"{VERSION} they pass the sticks through unchanged. Setting them up now means "
-                     "nothing else needs to change when the aids arrive in an update."))
+    story.append(box("<b>The aids start OFF.</b> Every aid is OFF in a new model, so the car drives exactly as "
+                     "before until you turn one on (section 7). Turn them on one at a time and try each on the "
+                     "bench first."))
     story.append(box("<b>Safety.</b> Make mixer changes on the bench with the car's motor disconnected or the "
                      "radio's RF output off. Check failsafe still works afterwards.", "warn"))
     story.append(PageBreak())
@@ -296,13 +296,13 @@ def build():
 
     # --- 5 check ---------------------------------------------------------------
     story.append(p("5. Check it works", "h1"))
-    story.append(p("In this version the aids pass the sticks through at x1.0, so a working setup looks the same as "
-                   "no setup. The <b>Aid Test</b> in the Trackside tool proves the mixes work: it sets both aids to "
-                   "x0.5, so CH1 and CH2 should move only half as far."))
+    story.append(p("With every aid OFF, a working setup looks the same as no setup. The <b>Aid Test</b> in the "
+                   "Trackside tool proves the mixes work: it pulses both aids between x1.0 and x0.5, so CH1 and CH2 "
+                   "swing between full and half travel. You can watch it on the Channels page too."))
     story.append(steps([
         "Open <b>System</b> (the gear in the bottom bar), swipe to the second page and tap <b>Trackside</b>.",
         "Tap <b>Check setup</b>. <b>Trackside sensor</b> should read <b>Sending</b>, and both aids <b>x1.00</b>.",
-        "Turn <b>Aid Test</b> ON, then pull the trigger and turn the wheel past 20%.",
+        "Turn <b>Aid Test</b> ON, then hold the trigger and the wheel steady past 30%.",
         "Scroll down. Both results should read <b>OK: moves half as far</b>.",
         "Leave the page with the back button. The Aid Test switches off by itself (also after 60 seconds).",
     ]))
@@ -365,8 +365,20 @@ def build():
                    "section 4c is still needed: it covers the case where Trackside isn't running at all."))
     story.append(pair("20-settings-drv", "Drive aids: Aids Switch at the top (aids OFF by default)",
                       "21-settings-volt", "Battery: alarm, Pack Capacity, Fuel Callouts"))
-    story.append(p("The Brake / ABS and Drive aids settings are all OFF or gentle by default. "
-                   "Leave them there for now: see <i>About this version</i> on page 2."))
+    story.append(p("The drive aids", "h2"))
+    story.append(table([
+        ["Aid (letter)", "What it does", "Try first"],
+        ["ABS (A)", "Past ABS Trigger the brake pulses between full brake and Brake Floor. Dynamic pulses faster "
+         "and lighter the harder you brake.", "Static, 8 Hz, Brake Floor 40%, Trigger 50%"],
+        ["Traction Control (T)", "Throttle can only rise so fast; letting off is instant. 0% = 0.1 s to full, "
+         "100% = 1 s.", "30% on a slippery track"],
+        ["Steer Cut Throttle (S)", "Less throttle the more you steer (100% = 60% less at full lock).", "30%"],
+        ["Corner Brake (C)", "Less brake the more you steer (100% = 60% less at full lock).", "30%"],
+        ["Steer Limit (D)", "Less steering at high throttle, from Steer Limit Start up (100% = 60% less at "
+         "full throttle).", "30% from 60%"],
+    ], [36 * mm, 88 * mm, 46 * mm]))
+    story.append(p("Each letter on the dashboard lights in its own colour while that aid is changing your input. "
+                   "All aids are OFF by default. ABS above about 10 Hz can't be timed exactly by the radio."))
     story.append(PageBreak())
 
     # --- 8 dashboard tour ------------------------------------------------------

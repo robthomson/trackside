@@ -27,16 +27,29 @@ counts as 0 in a Multiply line, which is why the lines need the LS1 safety switc
 
 | Aid | Letter | Behaviour | Status |
 | --- | --- | --- | --- |
-| ABS | A | Pulses brake past ABS Trigger between full brake and Brake Floor | ☐ |
-| Traction Control | T | Rise-only throttle slew limit; release is instant. 100% = moderate launch, not a crawl | ☐ |
-| Steer Cut Throttle | S | Less throttle the more you steer | ☐ |
-| Corner Brake | C | Less brake while steered; Corner ABS Hz / Corner Delay adjust ABS from steering | ☐ |
-| Steer Limit | D | Shrinks steering travel once throttle passes Steer Limit Start; capped at ~60% shrink at 100% | ☐ |
+| ABS | A | Pulses brake past ABS Trigger between full brake and Brake Floor | ☑ |
+| Traction Control | T | Rise-only throttle slew limit; release is instant. 0% = 0.1 s, 100% = 1.0 s zero to full | ☑ |
+| Steer Cut Throttle | S | Throttle × (1 − setting × steering × 0.6) | ☑ |
+| Corner Brake | C | Brake × (1 − setting × steering × 0.6); Corner ABS Hz / Corner Delay adjust ABS from steering | ☑ |
+| Steer Limit | D | Steering shrinks from Steer Limit Start to full throttle, up to 60% at 100% | ☑ |
+
+Measured on the channel outputs in the VX10 sim (lib/core.lua):
+
+- Traction 50% (0.55 s): 25/50/75/100% at 131/264/396/530 ms. While the trigger rests, Throttle Aid waits at the
+  rise allowed in one update (×0.055 at 50%), because the mixer applies a new stick ~1 update before the source
+  catches up; without this a launch showed one frame of full throttle.
+- Steer Cut 100%: full lock → 40%, half lock → 70%. Corner Brake 50%: full lock → 70% brake, half → 85%.
+- Steer Limit 100% from 50%: full throttle → 40% steering, 75% → 70%, under 50% untouched.
+- ABS Static 5 Hz, floor 40%, delay 50 ms: 152 ms full / 50 ms at 40% (±20 ms per pulse, the update rate).
+  Dynamic to 10 Hz: full pull 47/53 ms at floor 24%; 65% brake ~7.5 Hz at floor 32%. Corner ABS Hz 5 at full lock: 5 → 10 Hz.
+
+A letter lights only while its aid changes the output; armed aids show white, OFF ones grey.
 
 ### ABS detail
 
 - **OFF**: no ABS. **Static**: fixed ABS Frequency and Brake Floor. **Dynamic**: as brake deepens, pulse rate moves toward Dynamic Target and floor eases toward ~60% of Brake Floor at full pull; optional Dynamic Min Delay moves the hold toward its value.
 - **Pulse Delay** = baseline full-brake hold inside each cycle. 0 ms = maximum chatter (not a lock).
+  Each cycle is full brake for half the period plus the hold (capped at 85% of the period), then Brake Floor.
 - **Dynamic Min Delay** (hard brake) and **Corner Delay** (steering) are independent; both start from Pulse Delay and move toward their own value. If both apply, the **shorter** hold wins (they don't stack).
 - **Corner ABS Hz** adds 0–7 Hz to the base rate from steering. Needs ABS Mode ≠ OFF; doesn't run ABS alone.
 - ABS starts only when brake passes **ABS Trigger**. **Brake Direction** (Negative/Positive) picks which trigger side is brake.
