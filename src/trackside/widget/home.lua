@@ -70,6 +70,21 @@ local function colors()
     return changed
 end
 
+-- PACK box: amber value on LOW, background flashing red on ALARM (lib/alerts.lua).
+local function packColor()
+    local st = trackside.alerts.state
+    if st == "LOW" then return C.warn end
+    if st == "ALARM" then return C.text end
+    local p = trackside.fuel.pct
+    if not p then return nil end
+    if p < 20 then return C.brake elseif p < 50 then return C.warn end
+    return C.throttle
+end
+local function packBg()
+    if trackside.alerts.state == "ALARM" and floor(os.clock() * 2) % 2 == 0 then return C.brake end
+    return nil
+end
+
 -- Battery % colour: green, amber under 50%, red under 20%.
 local function battColor()
     local p = trackside.fuel.pct
@@ -108,7 +123,7 @@ local boxes = {
     { c = 10, r = 0, w = 2, h = 1, header = true, font = FONT_STD, title = "PWR", src = function() return telemetry.get("txpower") end, q = 1, pattern = "%dmW" },
 
     -- left: battery
-    { c = 0, r = 1, w = 6, h = 3, title = "PACK", font = FONT_XXL, color = battColor,
+    { c = 0, r = 1, w = 6, h = 3, title = "PACK", font = FONT_XXL, color = packColor, bg = packBg,
       src = function() return battery.pack end, q = 0.01, pattern = "%.2fV",
       sub = cellsLabel, subPattern = "%dS" },
     { c = 0, r = 4, w = 2, h = 2, title = "CELL", src = function() return battery.cell end, q = 0.01, pattern = "%.2f" },
@@ -116,11 +131,11 @@ local boxes = {
     { c = 4, r = 4, w = 2, h = 2, title = "MIN", src = function() return battery.min end, q = 0.01, pattern = "%.2f" },
 
     -- right: laps. CUR shows a bar while the lap switch is held towards a reset.
-    { c = 6, r = 1, w = 6, h = 3, title = "CUR", font = FONT_XXL, src = function() return laps.current() end,
+    { c = 6, r = 1, w = 6, h = 3, lap = true, title = "CUR", font = FONT_XXL, src = function() return laps.current() end,
       q = 0.1, fmt = lapLong, progress = function() return laps.holdFrac end },
-    { c = 6, r = 4, w = 2, h = 2, title = "L1", src = function() return laps.last end, q = 0.01, fmt = lapShort },
-    { c = 8, r = 4, w = 2, h = 2, title = "BEST", color = bestColor, src = function() return laps.best end, q = 0.01, fmt = lapShort },
-    { c = 10, r = 4, w = 2, h = 2, title = "LAP", src = function() return laps.count end, q = 1, pattern = "%d" },
+    { c = 6, r = 4, w = 2, h = 2, lap = true, title = "L1", src = function() return laps.last end, q = 0.01, fmt = lapShort },
+    { c = 8, r = 4, w = 2, h = 2, lap = true, title = "BEST", color = bestColor, src = function() return laps.best end, q = 0.01, fmt = lapShort },
+    { c = 10, r = 4, w = 2, h = 2, lap = true, title = "LAP", src = function() return laps.count end, q = 1, pattern = "%d" },
 
     -- footer: aid letters (or timer) + live scope
     { c = 0, r = 6, w = 6, h = 2, kind = "letters" },
@@ -176,6 +191,13 @@ local function refreshBox(b)
             changed = true
         end
     end
+    if b.bg then
+        local c = b.bg()
+        if c ~= b.bgKey then
+            b.bgKey = c
+            changed = true
+        end
+    end
     if b.color then
         local c = b.color()
         if c ~= b.colorKey then
@@ -210,7 +232,7 @@ for _, b in ipairs(boxes) do b.w0, b.h0 = b.w, b.h end
 -- --- drawing -----------------------------------------------------------------
 local function drawValueBox(b)
     local x, y, w, h = b.x, b.y, b.w, b.h
-    lcd.color(C.box)
+    lcd.color(b.bgKey or C.box)
     lcd.drawFilledRectangle(x, y, w, h)
     local ty = y
     lcd.font(FONT_S)
@@ -328,6 +350,64 @@ local function drawScope(b)
     lcd.drawFilledRectangle(sx - 3, barY + barH + 6, 6, 8)
 end
 
+-- --- lap view (tap the lap boxes; tap again to close) -------------------------
+-- Summary row (LAPS / BEST / AVG / TOT) over a grid of every lap kept, oldest
+-- first, best in green. Only painted when opened or when a lap is added.
+local LV_COLS = 4
+
+local function drawLapView(W, H)
+    lcd.color(C.bg)
+    lcd.drawFilledRectangle(0, 0, W, H)
+    local n = laps.count
+    local summary = {
+        { "LAPS", tostring(n) },
+        { "BEST", laps.best and lapShort(laps.best) or "--" },
+        { "AVG", n > 0 and lapShort(laps.total / n) or "--" },
+        { "TOT", n > 0 and lapLong(laps.total) or "--" },
+    }
+    local sw, sh = floor(W / 4), floor(H * 0.2)
+    for i, s in ipairs(summary) do
+        local x = (i - 1) * sw + PAD
+        lcd.color(C.box)
+        lcd.drawFilledRectangle(x, PAD, sw - 2 * PAD, sh - 2 * PAD)
+        lcd.font(FONT_S)
+        lcd.color(C.title)
+        lcd.drawText(x + 6, PAD + 2, s[1])
+        lcd.font(FONT_L)
+        lcd.color(i == 2 and laps.best and C.throttle or C.text)
+        local tw, th = lcd.getTextSize(s[2])
+        lcd.drawText(x + floor((sw - 2 * PAD - tw) / 2), PAD + floor((sh - 2 * PAD - th) / 2) + 6, s[2])
+    end
+
+    local list = laps.list
+    local top = sh + PAD
+    lcd.font(FONT_STD)
+    local _, rowH = lcd.getTextSize("0")
+    rowH = rowH + 6
+    local rows = math.max(1, floor((H - top - PAD) / rowH))
+    local cap = rows * LV_COLS
+    local first = math.max(1, #list - cap + 1)
+    local base = laps.count - #list            -- lap number of list[1] minus 1
+    local cw = floor(W / LV_COLS)
+    if #list == 0 then
+        lcd.color(C.title)
+        lcd.drawText(PAD + 6, top + 6, "No laps yet. Tap to close.")
+        return
+    end
+    for i = first, #list do
+        local k = i - first
+        local x = floor(k / rows) * cw + PAD + 6
+        local y = top + (k % rows) * rowH
+        local t = list[i]
+        lcd.color(C.title)
+        lcd.drawText(x, y, format("%d", base + i))
+        lcd.color(t == laps.best and C.throttle or C.text)
+        local s = lapShort(t)
+        local tw = lcd.getTextSize(s)
+        lcd.drawText(x + cw - 24 - tw, y, s)
+    end
+end
+
 -- --- widget callbacks --------------------------------------------------------
 local SLIDE_HOLD = 0.35     -- s after the last touch move before redraws resume
 
@@ -340,7 +420,8 @@ local function create()
     colors()
     return { textAt = -math.huge, scopeAt = -math.huge, themeAt = os.clock(),
              thrKey = false, steerKey = false, flagKey = false,
-             visible = false, slidingUntil = 0, full = true, pending = {} }
+             visible = false, slidingUntil = 0, full = true, pending = {},
+             lapView = false, lapViewKey = false, touchX = nil, touchY = nil, touchMoved = false }
 end
 
 -- Everything the letters box shows, as one number (redraw only on change).
@@ -401,6 +482,19 @@ local function wakeup(widget)
         if colors() then widget.full = true end
     end
 
+    if widget.lapView then
+        if now - widget.textAt >= TEXT_EVERY then
+            widget.textAt = now
+            trackside.background()
+            if laps.count ~= widget.lapViewKey then
+                widget.lapViewKey = laps.count
+                widget.full = true
+            end
+        end
+        if now >= widget.slidingUntil then flush(widget) end
+        return
+    end
+
     if now - widget.textAt >= TEXT_EVERY then
         widget.textAt = now
         trackside.background()
@@ -434,13 +528,49 @@ end
 
 -- Note touch slides (screen swipes) so wakeup can pause redraws. Never consumes
 -- the event: Ethos still handles the swipe.
-local function event(widget, category, value, x, y)
-    if category == EVT_TOUCH then
-        if value == TOUCH_MOVE then
-            widget.slidingUntil = os.clock() + SLIDE_HOLD
-        elseif value == TOUCH_END then
-            widget.slidingUntil = os.clock() + 0.1
+local TAP_SLOP = 15        -- px a touch may move and still count as a tap
+
+local function inBox(b, x, y)
+    return b.x and x >= b.x and x < b.x + b.w and y >= b.y and y < b.y + b.h
+end
+
+-- A tap: closes the lap view, opens it from the lap boxes, or opens the
+-- Trackside tool from the aid letters. Returns true when handled.
+local function tap(widget, x, y)
+    if widget.lapView then
+        widget.lapView, widget.full = false, true
+        for _, b in ipairs(boxes) do b.key = false end   -- rebuild every box's text
+        return true
+    end
+    for _, b in ipairs(boxes) do
+        if b.lap and inBox(b, x, y) then
+            widget.lapView, widget.lapViewKey, widget.full = true, laps.count, true
+            return true
         end
+    end
+    if inBox(lettersBox, x, y) and trackside.toolHandle and system.openPage then
+        system.openPage({ system = trackside.toolHandle })
+        return true
+    end
+    return false
+end
+
+-- Touch: a tap that didn't move is ours; anything else is a swipe that Ethos
+-- handles (redraws pause while it moves).
+local function event(widget, category, value, x, y)
+    if category ~= EVT_TOUCH then return false end
+    if value == TOUCH_START then
+        widget.touchX, widget.touchY, widget.touchMoved = x, y, false
+    elseif value == TOUCH_MOVE then
+        widget.slidingUntil = os.clock() + SLIDE_HOLD
+        if widget.touchX and (abs(x - widget.touchX) > TAP_SLOP or abs(y - widget.touchY) > TAP_SLOP) then
+            widget.touchMoved = true
+        end
+    elseif value == TOUCH_END then
+        widget.slidingUntil = os.clock() + 0.1
+        local wasTap = widget.touchX and not widget.touchMoved
+        widget.touchX = nil
+        if wasTap then return tap(widget, x, y) end
     end
     return false
 end
@@ -459,6 +589,10 @@ local function paint(widget)
     end
     local W, H = lcd.getWindowSize()
     layout(W, H)
+    if widget.lapView then
+        drawLapView(W, H)
+        return
+    end
     lcd.color(C.bg)
     lcd.drawFilledRectangle(0, 0, W, H)
     for i = 1, #boxes do

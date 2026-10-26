@@ -158,7 +158,8 @@ local function init()
     system.registerSource(aidSource("tsDrv", "Throttle Aid", "drive"))
     system.registerSource(aidSource("tsStr", "Steer Aid", "strmul"))
     system.registerWidget(load("widget/home.lua"))
-    system.registerSystemTool(toolDef)
+    -- The handle lets the dashboard open the tool (system.openPage, Ethos 26.1+).
+    trackside.toolHandle = system.registerSystemTool(toolDef)
     print(string.format("[trackside] boot %.3fs, RAM %d KB", os.clock() - bootAt, math.floor(collectgarbage("count"))))
 end
 
