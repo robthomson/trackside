@@ -2,7 +2,7 @@
   Telemetry for the dashboard.
 
   telemetry.get(key) returns a number or nil (no data). Keys:
-    connected, lq, snr, txpower, pack, current, used, rpm, esc_temp, motor_temp, txbatt
+    connected, lq, snr, txpower, pack, current, used, fuel, rpm, esc_temp, motor_temp, txbatt
 
   In the Ethos simulator, values come from SCRIPTS:/trackside.user/sim/sensors.lua,
   written by the sensor tool (bin/sensors/sensors.py) and re-read every 2 s. On a radio they come
@@ -29,6 +29,7 @@ local NAMES = {
     pack = { "RxBt", "VFAS", "LiPo", "Batt", "A1" },
     current = { "Curr", "Current" },
     used = { "Capa", "Consumption" },
+    fuel = { "Fuel", "Bat%", "Batt%" },     -- a real fuel sensor; ours is "Pack Fuel"
     rpm = { "RPM", "ERPM" },
     esc_temp = { "ESC Temp", "Tmp1", "Temp1" },
     motor_temp = { "Motor Temp", "Tmp2", "Temp2" },
@@ -111,7 +112,9 @@ function telemetry.get(key)
             -- When the sim says the link is lost, every link sensor reads as no data.
             local conn = simGet("connected")
             if key ~= "connected" and conn == 0 then return nil end
-            return simGet(key)
+            local v = simGet(key)
+            if key == "fuel" and simGet("fuel_on") ~= 1 then return nil end   -- sim: no fuel sensor fitted
+            return v
         end
     end
     return realGet(key, now)

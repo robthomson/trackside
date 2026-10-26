@@ -25,6 +25,9 @@
         <Sensor name="pack" label="Pack Voltage" type="range" min="0" max="26" default="8.4" unit="V" jitter="0.5" />
         <Sensor name="current" label="Current" type="range" min="0" max="200" default="12" round="true" unit="A" jitter="10" />
         <Sensor name="used" label="Consumption" type="range" min="0" max="10000" default="0" round="true" unit="mAh" />
+        <!-- A real fuel sensor (e.g. from the ESC). Off = Trackside estimates fuel itself. -->
+        <Sensor name="fuel_on" label="Fuel sensor fitted" type="bool" default="0" />
+        <Sensor name="fuel" label="Fuel" type="range" min="0" max="100" default="100" round="true" unit="%" />
     </Group>
 
     <Group name="ESC / Motor">

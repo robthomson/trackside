@@ -9,17 +9,21 @@ Status key: ☐ not started · ◐ scaffolded · ☑ done
 | Part | How it works | Status |
 | --- | --- | --- |
 | Drive aids output | Lua sources `Throttle Aid` (`tsDrv`) and `Steer Aid` (`tsStr`), enabled under Model → Lua | ◐ |
-| Mixing | Stick line (Add) + Lua source line (Multiply) per channel; confirmed in the VX10 sim | ☑ |
+| Mixing | Stick line (Add) + Lua source line (Multiply) per channel; scaling measured exact in the VX10 sim | ☑ |
+| Fail-safe | Trackside creates a DIY telemetry sensor `Trackside` (appId 0x5E10) and sends 1 every second. Logic switch LS1 (`Trackside > 0`) is the Active condition of both Multiply lines. Measured in the sim: scripts missing → stick 1:1 from boot; script stops → stick 1:1 after ~5 s; Lua error → sources send ×1.0 at once. The sensor and LS1 stay in the model when the scripts are missing | ☑ |
 | Inputs | Throttle Input / Steering Input source pickers (default: VX10 physical `Throttle` / `Steering`), so no feedback loop through the mixer | ☑ |
 | Dashboard | Widget `Trackside` (`tshome`) on any layout; header row only in full screen | ◐ |
-| Settings | Widget Configure page; opening settings straight from the dashboard: ☐ | ◐ |
+| Settings | System tool `Trackside`: tile menu (Settings, Diagnostics), one page per group; opening it from the dashboard: ☐ | ◐ |
+| Aids Switch | Drive aids page, switch picker (switch positions, logic switches). Off = every aid ×1.0, flags cleared, letters struck through. Not set = always on. Measured: SA↑ ×0.5 → 25%, SA- / SA↓ → 50% (stick 1:1). LS1 is still needed for a missing script | ☑ |
+| Check setup | Tool page: sensor and aid status, Aid Test (both aids ×0.5 while open, max 60 s) with a per-channel verdict. Verified in the sim on a good setup, a missing line and Operation Add | ☑ |
 | Storage | Per-model file `SCRIPTS:/trackside.user/models/<model>.lua` | ☑ |
 
 ## Drive-aid pipeline
 
 Fixed order: **Traction Control → Steer Cut Throttle → Corner Brake → ABS → Steer Limit**.
 Throttle/steer come from the physical sticks (no mixer feedback loop).
-The output is a multiplier; if Lua stops, the raw stick line still drives the car.
+The output is a multiplier from 0 to 1 (clamped), so an aid can only reduce a channel. A missing Lua source
+counts as 0 in a Multiply line, which is why the lines need the LS1 safety switch (see SETUP.md).
 
 | Aid | Letter | Behaviour | Status |
 | --- | --- | --- | --- |
@@ -31,45 +35,54 @@ The output is a multiplier; if Lua stops, the raw stick line still drives the ca
 
 ### ABS detail
 
-- **OFF**: no ABS. **STATIC**: fixed ABS Frequency and Brake Floor. **DYNAMIC**: as brake deepens, pulse rate moves toward DYN Target and floor eases toward ~60% of Brake Floor at full pull; optional DYN Min Delay moves the hold toward its value.
+- **OFF**: no ABS. **Static**: fixed ABS Frequency and Brake Floor. **Dynamic**: as brake deepens, pulse rate moves toward Dynamic Target and floor eases toward ~60% of Brake Floor at full pull; optional Dynamic Min Delay moves the hold toward its value.
 - **Pulse Delay** = baseline full-brake hold inside each cycle. 0 ms = maximum chatter (not a lock).
-- **DYN Min Delay** (hard brake) and **Corner Delay** (steering) are independent; both start from Pulse Delay and move toward their own value. If both apply, the **shorter** hold wins (they don't stack).
+- **Dynamic Min Delay** (hard brake) and **Corner Delay** (steering) are independent; both start from Pulse Delay and move toward their own value. If both apply, the **shorter** hold wins (they don't stack).
 - **Corner ABS Hz** adds 0–7 Hz to the base rate from steering. Needs ABS Mode ≠ OFF; doesn't run ABS alone.
-- ABS starts only when brake passes **ABS Trigger**. **Brake Direction** (NEG/POS) picks which trigger side is brake.
+- ABS starts only when brake passes **ABS Trigger**. **Brake Direction** (Negative/Positive) picks which trigger side is brake.
+- **Timing limit:** the mixer only sees a new aid value when Ethos runs the source's `wakeup`. In the VX10
+  sim that's every 15–52 ms (about 20 ms on average). Measured square waves came through at 5 and 10 Hz;
+  16.7 Hz came out as 15.9 Hz and 33 Hz as about 19 Hz, with uneven holds. So ABS Frequency above about
+  10–15 Hz and Pulse Delay in 5 ms steps can't be delivered as set. Check the rate on a real VX10 before
+  fixing the ranges.
 
 ## Settings (all in [settings.lua](../src/trackside/lib/settings.lua))
 
-| Tab | Setting | Range / step | Default |
+| Page | Setting | Range / step | Default |
 | --- | --- | --- | --- |
-| BRK | ABS Mode | OFF / STATIC / DYNAMIC | OFF |
-| BRK | ABS Frequency | 5–33 Hz, 1 | 5 Hz |
-| BRK | Brake Floor | 0–100%, 5 | 40% |
-| BRK | Pulse Delay | 0–100 ms, 5 | 50 ms |
-| BRK | ABS Trigger | 5–100%, 5 | 30% |
-| BRK | DYN Target | 5–33 Hz, 1 | 6 Hz |
-| BRK | DYN Min Delay | OFF, 5–100 ms, 5 | OFF |
-| DRV | Traction Control | OFF, 0–100%, 5 | OFF |
-| DRV | Steer Cut Throttle | OFF, 0–100%, 5 | OFF |
-| DRV | Corner Brake | OFF, 0–100%, 5 | OFF |
-| DRV | Corner ABS Hz | OFF, 0–7 Hz, 1 | OFF |
-| DRV | Corner Delay | OFF, 5–100 ms, 5 | OFF |
-| DRV | Steer Limit | OFF, 0–100%, 5 | OFF |
-| DRV | Steer Limit Start | 0–100%, 5 | 50% |
-| SET | Throttle Input / Steering Input | any source | VX10 Throttle / Steering |
-| SET | Timer | 1–45 min | 5 min |
-| SET | Timer Switch | any source | — |
-| SET | Show Timer | OFF / ON (footer: timer vs A T S C D) | OFF |
-| SET | Brake Direction | NEG / POS | NEG |
-| SET | Graph Direction | NOR / REV (scope only) | NOR |
-| SET | Lap Switch | any source | — |
-| SET | Laptimer Haptic | OFF / ON | ON |
-| SET | Throttle Start Lap | OFF / ON | OFF |
-| VOLT | Battery Type | LiPo (4.20 V full) / LiHV (4.35 V full); empty ≈ 3.50 V | LiPo |
-| VOLT | Cells | Auto, 1S–6S (Auto locks on first valid pack, unlocks after ~5 s telemetry loss) | Auto |
-| VOLT | Volt Alarm | OFF / ON | OFF |
-| VOLT | Alarm Cell Voltage | 3.20–3.90 V, 0.05 | 3.50 V |
+| Brake / ABS | ABS Mode | OFF / Static / Dynamic | OFF |
+| Brake / ABS | ABS Frequency | 5–33 Hz, 1 | 5 Hz |
+| Brake / ABS | Brake Floor | 0–100%, 5 | 40% |
+| Brake / ABS | Pulse Delay | 0–100 ms, 5 | 50 ms |
+| Brake / ABS | ABS Trigger | 5–100%, 5 | 30% |
+| Brake / ABS | Dynamic Target | 5–33 Hz, 1 | 6 Hz |
+| Brake / ABS | Dynamic Min Delay | OFF, 5–100 ms, 5 | OFF |
+| Drive aids | Aids Switch | any switch position / logic switch; --- = always on | --- |
+| Drive aids | Traction Control | OFF, 0–100%, 5 | OFF |
+| Drive aids | Steer Cut Throttle | OFF, 0–100%, 5 | OFF |
+| Drive aids | Corner Brake | OFF, 0–100%, 5 | OFF |
+| Drive aids | Corner ABS Hz | OFF, 0–7 Hz, 1 | OFF |
+| Drive aids | Corner Delay | OFF, 5–100 ms, 5 | OFF |
+| Drive aids | Steer Limit | OFF, 0–100%, 5 | OFF |
+| Drive aids | Steer Limit Start | 0–100%, 5 | 50% |
+| Inputs | Throttle Input / Steering Input | any source | VX10 Throttle / Steering |
+| Inputs | Throttle Channel / Steering Channel | any channel (used by Check setup) | CH2 / CH1 |
+| Timer & laps | Timer | 1–45 min | 5 min |
+| Timer & laps | Timer Switch | any source | — |
+| Timer & laps | Show Timer | OFF / ON (footer: timer vs A T S C D) | OFF |
+| Inputs | Brake Direction | Negative / Positive | Negative |
+| Inputs | Graph Direction | Normal / Reversed (scope only) | Normal |
+| Timer & laps | Lap Switch | any source | — |
+| Timer & laps | Lap Haptic | OFF / ON | ON |
+| Timer & laps | Throttle Start Lap | OFF / ON | OFF |
+| Battery | Battery Type | LiPo (4.20 V full) / LiHV (4.35 V full); empty ≈ 3.50 V | LiPo |
+| Battery | Cells | Auto, 1S–6S (Auto locks on first valid pack, unlocks after ~5 s telemetry loss) | Auto |
+| Battery | Voltage Alarm | OFF / ON | OFF |
+| Battery | Alarm Cell Voltage | 3.20–3.90 V, 0.05 | 3.50 V |
+| Battery | Pack Capacity | OFF, 500–10000 mAh, 100 (fuel by mAh used) | OFF |
+| Battery | Fuel Callouts | OFF / ON (spoken at 50, 30, 20, 10%) | ON |
 
-Suggested first-session map: ABS STATIC, 12 Hz, Floor 40%, Pulse 50 ms, Trigger 30%, DRV aids OFF, Timer 5 min.
+Suggested first-session map: ABS Static, 12 Hz, Floor 40%, Pulse 50 ms, Trigger 30%, drive aids OFF, Timer 5 min.
 
 ## Dashboard
 
@@ -78,7 +91,7 @@ Suggested first-session map: ABS STATIC, 12 Hz, Floor 40%, Pulse 50 ms, Trigger 
 | Header (full screen only) | Model name, LQ (0–100), SNR, TX voltage, TX power mW | ◐ |
 | Battery | Pack voltage + cell count, cell V, battery %, min pack V, state (OFF/NOTEL/OK/LOW/ALARM) | ◐ |
 | Laps | Current lap, last laps, lap count, best (flashes on new best) | ◐ |
-| Footer | A T S C D letters, or session countdown when Show Timer = ON (blinks when expired) | ◐ |
+| Footer | A T S C D letters (own colour = working, white = armed, grey = OFF, struck through = Aids Switch off), or session countdown when Show Timer = ON (blinks when expired) | ◐ |
 | Battery highlight | Colour change on LOW / flashing on ALARM | ☐ |
 
 ## Live scope bar
@@ -90,9 +103,33 @@ trigger depth (ABS armed); raw-stick marker when aids are shaping it; tick under
 ## Laps & timer
 
 - Lap from Lap Switch; minimum lap 3 s (debounce). Throttle Start Lap starts the clock on throttle.
-- Laptimer Haptic on each new lap. Dashboard shows recent laps; a lap view shows more + AVG / TOT / LAPS / BEST.
+- Lap Haptic on each new lap. Dashboard shows recent laps; a lap view shows more + AVG / TOT / LAPS / BEST.
 - Long hold (~1.2 s, progress bar) on the lap control resets the session.
 - Timer: short press start/pause/restart; long hold ~1.2 s resets. Haptic at zero always on (~3 s bursts with quiet gaps).
+
+## Fuel
+
+Best source wins: a real fuel sensor (`Fuel`, `Bat%`, `Batt%`) → mAh used with Pack Capacity (start % from resting
+voltage) → resting voltage on a LiPo/LiHV curve. The voltage estimate only reads after ≥1 s off throttle, holds
+on throttle, never rises once driven, and falls ≤0.5 %/s. A new pack = voltage rising before the first drive, or
+>5 s without pack voltage. mAh and voltage results are published as DIY sensor `Pack Fuel` (appId 0x5E11, %).
+Measured in the sim (lib/fuel.lua): sag at 80% throttle ignored, resting 4.05 V/cell → 83%, mAh 1000/5000 → 75%. ☑
+
+## Spoken alerts
+
+Phrases: `bin/audio/phrases.json` → `python bin/audio/generate.py` (Google Text-to-Speech, or `--engine sapi`
+offline) → 16 kHz mono WAVs in `src/trackside/audio/en/{default,us,gb}`. Played by lib/audio.lua: user file in
+`trackside.user/audio/`, then the radio voice, then en/default. Numbers via `system.playNumber` (real value,
+decimals = digits spoken). Checked in the sim log (lib/alerts.lua):
+
+| Alert | When | Status |
+| --- | --- | --- |
+| "Fuel N percent" | fuel passes 50/30/20/10, once per pack (Fuel Callouts, default ON) | ☑ |
+| "Battery low" + cell V + haptic | Voltage Alarm, ≥5 s of resting readings under the level; repeats 30 s | ☑ |
+| "Aid test on/off" | Aid Test starts, ends or times out | ☑ |
+| "Drive aids on/off" + buzz | Aids Switch flipped (not at start-up) | ☑ |
+| "Drive aids off. Trackside error." + haptic | a Lua error released the aids | ☑ |
+| Lap / best lap / timer | with the lap timer | ☐ |
 
 ## Battery alarm
 

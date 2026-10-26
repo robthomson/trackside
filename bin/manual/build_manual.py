@@ -162,16 +162,23 @@ def build():
     ], [35 * mm, 135 * mm]))
 
     story.append(p("How Trackside connects to your car", "h2"))
-    story.append(p("Trackside adds two items to your radio:"))
+    story.append(p("Trackside adds these items to your radio:"))
     story.append(table([
         ["Part", "What it is", "What it does"],
         ["<b>Throttle Aid</b> and <b>Steer Aid</b>", "Lua sources",
          "Each outputs a multiplier for one channel. Your mixes keep the normal stick line and "
          "add one <b>Multiply</b> line with the aid after it."],
-        ["<b>Trackside</b>", "Widget", "The race dashboard. Its Configure page holds all Trackside settings."],
+        ["<b>Trackside</b>", "Telemetry sensor",
+         "Created automatically. Reads 1 while Trackside runs. A logic switch built on it turns the aid "
+         "lines off if Trackside stops or is missing."],
+        ["<b>Trackside</b>", "System tool", "In the System menu. Holds all Trackside settings and <b>Check setup</b>, "
+         "which proves the aid mixes work."],
+        ["<b>Trackside</b>", "Widget", "The race dashboard."],
     ], [40 * mm, 28 * mm, 102 * mm]))
     story.append(p("Because the stick line stays in place, the car is always driven by your trigger and wheel. "
-                   "The aids only scale them. If Trackside ever stops running, the channel falls back to the plain stick."))
+                   "The aids can only reduce them. If the Trackside scripts are missing, the safety switch from "
+                   "section 4c turns the aid lines off and the car drives on the plain stick. If Trackside hits an "
+                   "error, the aids let the stick straight through."))
     story.append(box("<b>About this version.</b> The aids are set up and connected, but in version "
                      f"{VERSION} they pass the sticks through unchanged. Setting them up now means "
                      "nothing else needs to change when the aids arrive in an update."))
@@ -210,7 +217,8 @@ def build():
     story.append(steps([
         "Open <b>Model</b> and swipe to the second page.",
         "Tap <b>Lua</b>.",
-        "Turn <b>Throttle Aid</b> and <b>Steer Aid</b> ON.",
+        "Turn <b>Throttle Aid</b> and <b>Steer Aid</b> ON. Trackside then also creates its <b>Trackside</b> "
+        "telemetry sensor, used in section 4c.",
     ]))
     story.append(shot("03-model-menu-lua", "Model menu, page 2: the Lua page", width=105 * mm))
     story.append(pair("04-lua-off", "Both start OFF", "05-lua-on", "Turn both ON"))
@@ -248,26 +256,71 @@ def build():
                    "<b>Lua &gt; Steer Aid</b>, Operation <b>Multiply</b>, Output <b>CH1 (Steering)</b>."))
     story.append(shot("12-output-ch1", "Steer Aid on CH1: wheel at -40% gives CH1 -40%", width=105 * mm))
 
-    story.append(p("4c. Check the order", "h2"))
-    story.append(p("Each stick mix should be followed by its aid. Use exactly one aid line per channel: "
-                   "a second Multiply line with the same aid applies it twice."))
-    story.append(shot("13-mixes-done", "Finished: Steering then Steer Aid (CH1), Throttle then Throttle Aid (CH2)",
-                      width=105 * mm))
+    story.append(PageBreak())
+    story.append(p("4c. Add the safety switch", "h2"))
+    story.append(p("This makes the two aid lines run only while Trackside is loaded. You create one logic switch "
+                   "and use it as the <b>Active condition</b> of both aid lines."))
+    story.append(box("<b>Don't skip this.</b> If the Trackside scripts are missing (not copied, a new SD card, a "
+                     "failed update) or stops, Ethos treats each aid as zero or holds its last value. An aid line without the safety switch then "
+                     "multiplies its channel by zero: <b>no steering and no throttle</b>. With the switch, the aid "
+                     "lines turn off and the car drives on the plain stick.", "warn"))
+    story.append(steps([
+        "Open the <b>Throttle Aid</b> mix: tap it, then <b>Edit</b>.",
+        "Tap <b>Active condition</b>, choose <b>Logic switches</b>, then <b>+ Add a new logic switch</b>.",
+        "Set <b>Function</b> to <b>A &gt; X</b> and <b>Source (A)</b> to <b>Telemetry &gt; Trackside</b>. "
+        "Leave <b>Value (X)</b> at 0. The title <b>LS1</b> turns green while Trackside is running.",
+        "Tap <b>&lt;</b> to go back. The mix's Active condition now reads <b>LS1</b>.",
+        "Open the <b>Steer Aid</b> mix and set its <b>Active condition</b> to <b>Logic switches &gt; LS1</b>.",
+    ]))
+    story.append(pair("24-add-logic-switch", "Active condition: Logic switches > + Add a new logic switch",
+                      "25-logic-switch", "LS1: A > X, Source (A) Trackside sensor, Value (X) 0"))
+    story.append(shot("26-active-ls1", "The aid line with Active condition LS1", width=105 * mm))
+    story.append(PageBreak())
+
+    story.append(p("4d. Check the order", "h2"))
+    story.append(p("Each stick mix must be followed by its aid. An aid line placed <b>above</b> its stick mix "
+                   "does nothing. Use exactly one aid line per channel: a second Multiply line with the same aid "
+                   "applies it twice."))
+    story.append(shot("13-mixes-done", "Finished: Steering then Steer Aid (CH1), Throttle then Throttle Aid (CH2), "
+                      "both aids on LS1", width=105 * mm))
     story.append(table([
-        ["Channel", "Mix", "Source", "Operation", "Output"],
-        ["CH1", "Steering", "Analogs > Steering (the wheel)", "Add", "CH1"],
-        ["CH1", "Steer Aid", "Lua > Steer Aid", "Multiply", "CH1"],
-        ["CH2", "Throttle", "Analogs > Throttle (the trigger)", "Add", "CH2"],
-        ["CH2", "Throttle Aid", "Lua > Throttle Aid", "Multiply", "CH2"],
-    ], [22 * mm, 28 * mm, 60 * mm, 26 * mm, 34 * mm]))
-    story.append(p("If you need to reverse a channel, do it on the stick mix or in Channels, never on the aid line."))
+        ["Channel", "Mix", "Source", "Operation", "Active condition"],
+        ["CH1", "Steering", "Analogs > Steering (the wheel)", "Add", "Always on"],
+        ["CH1", "Steer Aid", "Lua > Steer Aid", "Multiply", "LS1"],
+        ["CH2", "Throttle", "Analogs > Throttle (the trigger)", "Add", "Always on"],
+        ["CH2", "Throttle Aid", "Lua > Throttle Aid", "Multiply", "LS1"],
+    ], [20 * mm, 26 * mm, 60 * mm, 26 * mm, 38 * mm]))
+    story.append(p("To reverse a channel, use <b>Model &gt; Channels</b>. The wizard's stick mixes have no reverse "
+                   "option, and a reverse on the aid line flips the whole channel."))
     story.append(PageBreak())
 
     # --- 5 check ---------------------------------------------------------------
-    story.append(p("5. Check the channels", "h1"))
-    story.append(p("Open <b>Model &gt; Channels</b>, then move the wheel and pull the trigger. CH1 should follow the wheel "
-                   "and CH2 the trigger, the same as before you added the aids."))
-    story.append(shot("14-channels-check", "Wheel at 25% and trigger at 50%: CH1 25%, CH2 50%"))
+    story.append(p("5. Check it works", "h1"))
+    story.append(p("In this version the aids pass the sticks through at x1.0, so a working setup looks the same as "
+                   "no setup. The <b>Aid Test</b> in the Trackside tool proves the mixes work: it sets both aids to "
+                   "x0.5, so CH1 and CH2 should move only half as far."))
+    story.append(steps([
+        "Open <b>System</b> (the gear in the bottom bar), swipe to the second page and tap <b>Trackside</b>.",
+        "Tap <b>Check setup</b>. <b>Trackside sensor</b> should read <b>Sending</b>, and both aids <b>x1.00</b>.",
+        "Turn <b>Aid Test</b> ON, then pull the trigger and turn the wheel past 20%.",
+        "Scroll down. Both results should read <b>OK: moves half as far</b>.",
+        "Leave the page with the back button. The Aid Test switches off by itself (also after 60 seconds).",
+    ]))
+    story.append(pair("27-system-menu", "System, page 2: the Trackside tool",
+                      "28-check-idle", "Check setup, Aid Test OFF"))
+    story.append(shot("29-check-ok", "Aid Test ON: trigger 60% gives CH2 30%, both results OK", width=105 * mm))
+    story.append(table([
+        ["Result", "Meaning and fix"],
+        ["OK: moves half as far", "The aid line works."],
+        ["Not working: aid line missing or off",
+         "The channel ignored the aid. Check the aid line exists, its Output is the right channel, it sits below "
+         "the stick mix, and LS1 is green (section 4c)."],
+        ["Wrong: set Operation Multiply", "The aid line is there but changes the channel the wrong way, "
+                                          "usually Operation <b>Add</b>. Set it to <b>Multiply</b>."],
+        ["Throttle Aid: Not running", "Turn the aid on in <b>Model &gt; Lua</b> (section 3)."],
+    ], [58 * mm, 112 * mm]))
+    story.append(p("The check compares the channel to the input. If your aids drive other channels than CH1 and CH2, "
+                   "set <b>Throttle Channel</b> and <b>Steering Channel</b> on the tool's Inputs page."))
     story.append(PageBreak())
 
     # --- 6 dashboard -----------------------------------------------------------
@@ -287,24 +340,32 @@ def build():
 
     # --- 7 settings ------------------------------------------------------------
     story.append(p("7. Trackside settings", "h1"))
-    story.append(p("All settings are on the widget's own <b>Configure</b> page: in <b>Screens</b>, tap the Trackside "
-                   "widget. They're grouped into four panels; tap a panel to open it. Settings are saved for each model "
-                   "when you leave the page."))
-    story.append(pair("18-settings-overview", "The four settings groups",
-                      "19-settings-set", "SET: inputs and directions"))
+    story.append(p("All settings are in the Trackside tool: <b>System</b>, second page, <b>Trackside</b>. "
+                   "Tap a tile to open its page; the back button returns to the menu. Settings are saved for the "
+                   "current model (its name is shown at the top) when you leave a page."))
+    story.append(pair("18-settings-overview", "The Trackside tool: settings and diagnostics",
+                      "19-settings-set", "Inputs"))
     story.append(p("Check these first", "h2"))
     story.append(table([
-        ["Setting", "Group", "What to set"],
-        ["Throttle Input", "SET", "The control the aids read for throttle. Default: the VX10 trigger (Throttle)."],
-        ["Steering Input", "SET", "The control the aids read for steering. Default: the VX10 wheel (Steering)."],
-        ["Brake Direction", "SET", "Which way the trigger brakes. Pull the brake and watch the dashboard bar: "
-                                    "it should turn red."],
-        ["Battery Type, Cells", "VOLT", "Match your packs (LiPo or LiHV). Cells = Auto detects the cell count."],
-        ["Volt Alarm, Alarm Cell Voltage", "VOLT", "Turn the low-voltage alarm on and choose the per-cell warning level."],
-    ], [42 * mm, 18 * mm, 110 * mm]))
-    story.append(pair("20-settings-drv", "DRV: drive aids (OFF by default)",
-                      "21-settings-volt", "VOLT: battery alarm"))
-    story.append(p("The BRK (brake pulse) and DRV (drive aid) settings are all OFF or gentle by default. "
+        ["Setting", "Page", "What to set"],
+        ["Throttle Input", "Inputs", "The control the aids read for throttle. Default: the VX10 trigger (Throttle)."],
+        ["Steering Input", "Inputs", "The control the aids read for steering. Default: the VX10 wheel (Steering)."],
+        ["Brake Direction", "Inputs", "Which way the trigger brakes. Pull the brake and watch the dashboard bar: "
+                                      "it should turn red."],
+        ["Battery Type, Cells", "Battery", "Match your packs (LiPo or LiHV). Cells = Auto detects the cell count."],
+        ["Pack Capacity", "Battery", "Your pack size in mAh. Only needed if the car sends mAh used: fuel is then "
+                                        "counted by mAh instead of estimated from voltage."],
+        ["Fuel Callouts", "Battery", "Says \"Fuel 50 percent\" and so on at 50, 30, 20 and 10%. ON by default."],
+        ["Voltage Alarm, Alarm Cell Voltage", "Battery",
+         "Turn the low-voltage alarm on and choose the per-cell warning level."],
+    ], [44 * mm, 26 * mm, 100 * mm]))
+    story.append(p("<b>Aids Switch</b> (top of the Drive aids page): pick a switch position, for example <b>SA&#8593;</b>. "
+                   "While it's in that position the aids work; in any other position every aid lets the sticks "
+                   "straight through. Leave it at <b>---</b> to have the aids always on. The LS1 safety switch from "
+                   "section 4c is still needed: it covers the case where Trackside isn't running at all."))
+    story.append(pair("20-settings-drv", "Drive aids: Aids Switch at the top (aids OFF by default)",
+                      "21-settings-volt", "Battery: alarm, Pack Capacity, Fuel Callouts"))
+    story.append(p("The Brake / ABS and Drive aids settings are all OFF or gentle by default. "
                    "Leave them there for now: see <i>About this version</i> on page 2."))
     story.append(PageBreak())
 
@@ -317,34 +378,66 @@ def build():
         ["Header (full screen)", "Model name, link quality (LQ), radio battery (TX) and transmit power (PWR)."],
         ["PACK", "Car pack voltage, with the detected cell count (for example 2S) in the corner. "
                  "Green above 50%, amber below 50%, red below 20%."],
-        ["CELL / BATT / MIN", "Voltage per cell, estimated charge left, and the lowest pack voltage this session."],
+        ["CELL / BATT / MIN", "Voltage per cell, fuel left (see below), and the lowest pack voltage this session."],
         ["CUR / L1 / BEST / LAP", "Lap timing: current lap, last lap, best lap and lap count. "
                                   "The lap timer arrives in a later version."],
-        ["A T S C D", "Drive aid indicators. Each lights in its own colour while that aid is working."],
+        ["A T S C D", "Drive aid letters: in the aid's own colour while it's working, white when it's armed, grey "
+                      "when it's OFF. Struck through when the Aids Switch has turned the aids off."],
         ["Live bar", "Throttle (green) or brake (red) from the centre line. The small mark below shows the wheel position."],
     ], [42 * mm, 128 * mm]))
     story.append(p("Telemetry values show <b>--</b> until the receiver sends them."))
+    story.append(p("Fuel (BATT)", "h2"))
+    story.append(table([
+        ["Source", "Used when", "How it works"],
+        ["Fuel sensor", "The car sends a fuel sensor (for example <b>Fuel</b> from the ESC)",
+         "Shown as sent. Trackside always prefers it."],
+        ["mAh used", "Pack Capacity is set and the car sends mAh used",
+         "Starts from the resting voltage, then counts down by mAh used."],
+        ["Voltage", "Otherwise",
+         "Read from the resting voltage whenever you've been off the throttle for a second. On throttle it "
+         "holds, and once you've driven it never goes back up."],
+    ], [28 * mm, 58 * mm, 84 * mm]))
+    story.append(p("For the mAh and voltage sources Trackside creates a telemetry sensor called <b>Pack Fuel</b>, "
+                   "so you can use it in logic switches, alerts or other widgets. Check setup shows which source is in use."))
+    story.append(KeepTogether([p("Spoken alerts", "h2"), table([
+        ["You hear", "When"],
+        ["Fuel 50 percent (30, 20, 10)", "Fuel passes each level, once per pack. Fuel Callouts on the Battery page."],
+        ["Battery low, 3.4 volts + vibration", "Voltage Alarm is ON and the resting cell voltage stays under Alarm Cell "
+         "Voltage for 5 seconds (readings on throttle don't count). Repeats every 30 seconds."],
+        ["Aid test on / Aid test off", "The Aid Test on Check setup starts or ends."],
+        ["Drive aids on / Drive aids off + short buzz", "You flip the Aids Switch."],
+        ["Drive aids off. Trackside error. + vibration", "A Trackside error released the aids: the car drives on the plain sticks."],
+    ], [62 * mm, 108 * mm])]))
+    story.append(p("Alerts use the radio's voice setting (English: default, US or UK). To use your own recording, put a "
+                   "WAV with the same name in <b>SCRIPTS/trackside.user/audio</b>."))
     story.append(PageBreak())
 
     # --- 9 troubleshooting -----------------------------------------------------
     story.append(p("9. Troubleshooting", "h1"))
     story.append(table([
         ["Problem", "Check"],
-        ["A channel doesn't move at all",
-         "The stick mix's source was changed to an aid. Set the Steering and Throttle mixes back to "
-         "Analogs &gt; Steering and Analogs &gt; Throttle, and add the aids as separate Multiply lines (section 4)."],
+        ["No steering or throttle at all",
+         "Trackside isn't loaded and the aid lines have no safety switch. Set both aid lines' Active condition to "
+         "<b>LS1</b> (section 4c), then install Trackside. Also check the Steering and Throttle mixes still use "
+         "Analogs &gt; Steering and Analogs &gt; Throttle as their source."],
         ["Throttle or steering moves only a little",
          "Update Trackside to the latest version. Early test builds scaled the aid output wrongly."],
         ["The aid mix has no effect",
-         "Set the Free mix's <b>Output</b> to the channel (CH2 or CH1). Also check that Operation is <b>Multiply</b>, not Add."],
+         "Run <b>Check setup</b> with the Aid Test (section 5): it says what is wrong. Set the Free mix's <b>Output</b> to the channel (CH2 or CH1), check that Operation is <b>Multiply</b>, "
+         "and that the aid line sits <b>below</b> its stick mix. LS1 must be green (Model &gt; Logic switches)."],
+        ["The aids stopped working after reinstalling Trackside",
+         "If the model was changed while Trackside was missing (even a trim click), Ethos clears its Lua links. "
+         "The car still drives normally. Open each aid line and pick its Lua source again. LS1 and the "
+         "Trackside sensor are kept."],
         ["No Lua category when picking a source",
-         "Turn on Throttle Aid and Steer Aid in <b>Model &gt; Lua</b> (section 3). This is needed once per model."],
+         "Turn on Throttle Aid and Steer Aid in <b>Model &gt; Lua</b> (section 3). "
+         "This is needed once per model."],
         ["Trackside isn't in the widget list",
          "Check the folder is <b>SCRIPTS/trackside</b> with <b>main.lua</b> inside, then restart the radio."],
         ["The dashboard shows -- everywhere",
          "No telemetry yet. Values appear once the receiver is bound and sending telemetry."],
         ["The bar turns red when I accelerate",
-         "Change <b>Brake Direction</b> in the SET settings."],
+         "Change <b>Brake Direction</b> on the tool's Inputs page."],
     ], [55 * mm, 115 * mm]))
 
     doc = SimpleDocTemplate(str(OUT), pagesize=A4, leftMargin=20 * mm, rightMargin=20 * mm,
