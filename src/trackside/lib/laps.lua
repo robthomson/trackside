@@ -71,6 +71,23 @@ function laps.resetTimer()
     oneMinSaid, expiredAt, lastBuzz = false, nil, nil
 end
 
+-- Toolbar actions (dashboard): same as a Timer Switch press / both long holds.
+function laps.toggleTimer()
+    if not laps.timerLeft then laps.resetTimer() end
+    if laps.timerExpired then
+        laps.resetTimer()
+        laps.timerRunning = true
+    else
+        laps.timerRunning = not laps.timerRunning
+    end
+end
+
+function laps.resetAll()
+    laps.reset()
+    laps.resetTimer()
+    audio.say("laps_reset")
+end
+
 -- Current lap time in seconds (0 before the clock starts).
 function laps.current(now)
     if not laps.running or not lapStart then return 0 end
