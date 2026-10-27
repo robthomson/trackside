@@ -45,6 +45,14 @@ Trackside: Ethos Lua race suite for the FrSky Velox VX10 (800×480 colour touch,
 - `main.lua` prints `[trackside] boot <s>, RAM <KB>`; check it after changes. Watch
   `system.getInstructionsUsage()` if a callback does heavy work (the script is killed at 100).
 
+## Releasing
+
+- Set `trackside.VERSION` in main.lua (and `VERSION` in bin/manual/build_manual.py), add a `# <version>`
+  section to Releases.md, rebuild the PDF.
+- Merge to main, then push a tag: `snapshot/<version>` (pre-release) or `release/<version>` (release;
+  `-rcN` = candidate). The workflow builds the zip with `bin/package/build_package.py` and publishes it.
+- The package key `com.github.robthomson.trackside` must never change.
+
 ## Testing in the simulator
 
 - VS Code: run **Deploy & Launch [SIM]**.

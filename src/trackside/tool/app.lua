@@ -137,6 +137,9 @@ local function buildCheck()
     local function staticLine(label)
         return form.addStaticText(form.addLine(label), nil, "")
     end
+    local version = trackside.VERSION
+    if trackside.BUILD ~= version then version = version .. " (" .. trackside.BUILD .. ")" end
+    form.addStaticText(form.addLine("Version"), nil, version)
     check.sensor = staticLine("Trackside sensor")
     check.fuel = staticLine("Fuel")
     local testLine = form.addLine("Aid Test (aids pulse x0.5)")

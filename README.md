@@ -34,6 +34,12 @@ From the VX10 simulator.
 
 Step-by-step setup with more screenshots: [docs/Trackside-Setup-Guide.pdf](docs/Trackside-Setup-Guide.pdf).
 
+## Install
+
+Download `trackside-<version>.zip` from the [releases](https://github.com/robthomson/trackside/releases)
+and install it with Ethos Suite, or copy the zip's `trackside` folder into the radio's `SCRIPTS` folder.
+Then follow the setup guide (attached to each release, also in [docs/](docs/Trackside-Setup-Guide.pdf)).
+
 ## What's in it
 
 | Part | Ethos item | What it does |
@@ -92,6 +98,17 @@ The simulator board is set in [.vscode/settings.json](.vscode/settings.json) (`V
 **Setup guide (PDF, with screenshots):** [docs/Trackside-Setup-Guide.pdf](docs/Trackside-Setup-Guide.pdf).
 Short text version: [docs/SETUP.md](docs/SETUP.md). Rebuild the PDF with `python bin/manual/build_manual.py`
 (screenshots in `docs/manual/images`, captured from the VX10 simulator).
+
+### Releases
+
+| Tag | Workflow | Result |
+| --- | --- | --- |
+| push to `main` / a pull request | `push.yml` / `pr.yml` | test zip as a build artifact |
+| `snapshot/<version>` | `snapshot.yml` | GitHub pre-release with the zip and the setup guide |
+| `release/<version>` (`-rcN` = candidate) | `release.yml` | GitHub release with the zip and the setup guide |
+
+Release notes come from the `# <version>` section of [Releases.md](Releases.md). Build a zip locally with
+`python bin/package/build_package.py --artifact-version 0.1.0` (checked with `bin/package/validate_manifest.py`).
 
 ### Simulated telemetry
 

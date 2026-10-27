@@ -6,3 +6,4 @@ simulators/*
 
 .claude/settings.local.json
 bin/audio/.cache/
+dist/
