@@ -1,0 +1,44 @@
+name: Snapshot
+
+# Push a tag snapshot/<version> (e.g. snapshot/0.1.1) to publish a pre-release
+# with the package zip and the setup guide. Notes come from "# <version>" in
+# Releases.md.
+
+on:
+  push:
+    tags:
+      - 'snapshot/*'
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Version from tag
+        shell: bash
+        run: |
+          echo "VER=${GITHUB_REF_NAME#snapshot/}" >> "$GITHUB_ENV"
+
+      - name: Release notes
+        run: python .github/scripts/extract_release_notes.py "${{ env.VER }}" Releases.md > Notes.md
+
+      - name: Build and validate the package
+        run: |
+          python bin/package/build_package.py --artifact-version "${{ env.VER }}" --release-notes-file Notes.md --output-dir dist
+          python bin/package/validate_manifest.py "dist/trackside-${{ env.VER }}.zip"
+          cp docs/Trackside-Setup-Guide.pdf dist/
+
+      - name: Publish pre-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --prerelease --notes-file Notes.md \
+            -t "Trackside - Snapshot ${{ env.VER }}" dist/*
