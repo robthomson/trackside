@@ -25,7 +25,7 @@ from reportlab.platypus import (
 REPO = Path(__file__).resolve().parents[2]
 IMG = REPO / "docs" / "manual" / "images"
 OUT = REPO / "docs" / "Trackside-Setup-Guide.pdf"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 ACCENT = colors.HexColor("#F2A23A")     # Ethos-style amber
 INK = colors.HexColor("#1D232B")

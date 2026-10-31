@@ -1,3 +1,25 @@
+# 0.2.0
+
+Adds **Rock**: hold a switch and the throttle pulses forward and reverse to rock a car off its roof.
+
+Tested in the VX10 simulator (Ethos 26.2). Not yet tried on a real ESC, so try it on the bench first with the car
+on a stand. Rock is off until you pick a Rock Switch, so updating changes nothing on an existing model.
+
+**Rock**
+- New Lua source **Rock**. Add one Free mix after the Throttle Aid line: source Lua → Rock, Operation **Add**,
+  Output the throttle channel. It needs no LS1: it adds nothing unless you hold the switch, or if Trackside is missing.
+- New **Rock** page in the Trackside tool: Rock Switch, Reverse Style (Direct, Via neutral, Double tap) to match
+  the ESC, Neutral Dwell, Pulse Start / Max, Power Start / Max, Ramp Cycles and Hold Limit.
+- Each rock pushes a little longer and harder than the last, then starts again, so one of them matches the car.
+- Stops when you let go, pull the trigger past 30%, or reach the Hold Limit ("Rock limit"). Won't start with the
+  trigger pulled, or if the switch was already on when the radio started.
+- Dashboard: an **R** letter lights pink while rocking, and the bar shows each push (green forward, red reverse).
+- Check setup: Rock status and a Rock result that confirms the mix line works.
+- Reverse must be enabled on the ESC.
+
+**Other**
+- Setup guide: new section 4e and Rock settings in section 7.
+
 # 0.1.0
 
 First release of Trackside: race dashboard and drive aids for the FrSky Velox VX10.

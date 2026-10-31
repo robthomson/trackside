@@ -19,7 +19,7 @@ local bootAt = os.clock()
 -- One shared table for every part of the suite (Ethos runs all scripts in one Lua state).
 trackside = trackside or {}
 trackside.BASE = BASE
-trackside.VERSION = "0.1.0"
+trackside.VERSION = "0.2.0"
 -- Build name, stamped by bin/package/build_package.py (e.g. 0.1.0, commit-abc1234).
 trackside.BUILD = "dev"
 
