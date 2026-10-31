@@ -14,14 +14,17 @@ Race dashboard and drive aids for the **FrSky Velox VX10** surface radio (FrSky 
 - **Drive aids:** ABS (Static / Dynamic), Traction Control, Steer Cut Throttle, Corner Brake and
   Steer Limit. They use only your trigger, wheel and time (no telemetry), and an **Aids Switch** turns
   them all on or off.
+- **Rock:** hold a switch and the throttle pulses forward and reverse, ramping up, to rock the car off
+  its roof. Works with the ESC's reverse style (direct, via neutral or double tap) and stops the moment
+  you let go, pull the trigger or hit the hold limit.
 - **Built-in safety:** if Trackside hits an error the aids let the sticks straight through, and the
   LS1 safety switch turns the aid mix lines off if Trackside is missing or stops.
 - **Race dashboard:** pack voltage and cells, fuel, lowest voltage, current / last / best lap and lap count,
-  aid letters, a live throttle / brake / steering bar, and the race countdown. **Swipe up** for a toolbar
+  aid letters (A T S C D R), a live throttle / brake / steering bar, and the race countdown. **Swipe up** for a toolbar
   with the lap view, timer start / pause, reset and settings.
 - **Lap timer and countdown** on switches, with lap haptics.
 - **Spoken alerts:** lap times and "best lap", fuel 50 / 30 / 20 / 10%, "battery low", "one minute" and
-  "time up", drive aids on / off.
+  "time up", drive aids on / off, "rock limit".
 - **Fuel** from a fuel sensor if the car has one, otherwise from mAh used or resting voltage, published
   as a telemetry sensor (Pack Fuel) for alerts and other widgets.
 - **Trackside tool** (System menu): every setting per model, and **Check setup**, whose Aid Test shows
@@ -67,13 +70,15 @@ Needs Ethos 26.1 or later (tested on 26.2).
 Then set up your car model. The [setup guide](docs/Trackside-Setup-Guide.pdf) walks through it with
 screenshots; in short:
 
-1. **Model → Lua:** turn on **Throttle Aid** and **Steer Aid**.
+1. **Model → Lua:** turn on **Throttle Aid** and **Steer Aid** (and **Rock** if you want it).
 2. **Mixes:** after the Throttle and Steering mixes, add one Free mix each: source Lua → the aid,
    Operation **Multiply**, Output the same channel.
 3. **Safety switch:** give both aid lines the Active condition **LS1** (`A > X`, Source Telemetry →
    **Trackside**, Value 0).
-4. **System → Trackside → Check setup:** turn on the Aid Test. Both results should read **OK**.
-5. **Screens:** add a full-screen page with the **Trackside** widget.
+4. **Rock** (optional): one more Free mix after the Throttle Aid line: source Lua → **Rock**, Operation
+   **Add**, Output the throttle channel. Then pick a Rock Switch on the tool's Rock page.
+5. **System → Trackside → Check setup:** turn on the Aid Test. Both results should read **OK**.
+6. **Screens:** add a full-screen page with the **Trackside** widget.
 
 Your settings are saved per model in `SCRIPTS/trackside.user`, so updating Trackside keeps them.
 
@@ -82,10 +87,11 @@ Your settings are saved per model in `SCRIPTS/trackside.user`, so updating Track
 | Part | Ethos item | What it does |
 | --- | --- | --- |
 | Throttle Aid, Steer Aid | Lua sources | Multipliers used on Multiply mix lines for throttle and steering |
+| Rock | Lua source | Forward / reverse pulses on an Add mix line of the throttle channel while the Rock Switch is held |
 | Trackside | Telemetry sensor (created automatically) | Reads 1 while Trackside runs; logic switch LS1 uses it to turn the Multiply lines off if Trackside stops |
 | Pack Fuel | Telemetry sensor (created automatically) | Fuel % from mAh used or resting voltage, when the car has no fuel sensor |
 | Trackside | Widget | Race dashboard, lap view and the swipe-up toolbar |
-| Trackside | System tool | Settings (Brake / ABS, Drive aids, Inputs, Timer & laps, Battery), saved per model, and Check setup with the Aid Test |
+| Trackside | System tool | Settings (Brake / ABS, Drive aids, Rock, Inputs, Timer & laps, Battery), saved per model, and Check setup with the Aid Test |
 
 ## Roadmap
 
@@ -104,6 +110,7 @@ src/trackside/         -> SCRIPTS/trackside/ on the radio
   main.lua             registers the sources, the widget and the system tool
   lib/settings.lua     settings schema (ranges/defaults) + per-model save
   lib/core.lua         drive-aid pipeline: traction, steer cut, corner brake, ABS, steer limit
+  lib/rock.lua         Rock: forward / reverse pulse sequence while the Rock Switch is held
   lib/form.lua         settings fields generated from the schema (loaded on first use)
   lib/telemetry.lua    sensor values (simulator file or real sensors)
   lib/battery.lua      cell count, cell V, %, session minimum

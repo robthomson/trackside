@@ -17,7 +17,7 @@ local GFX = trackside.BASE .. "tool/gfx/"
 local function mask(name) return lcd.loadMask(GFX .. name .. ".png") end
 
 local ICONS = {
-    CHECK = mask("check"), BRK = mask("brake"), DRV = mask("drive"),
+    CHECK = mask("check"), BRK = mask("brake"), DRV = mask("drive"), ROCK = mask("rock"),
     IN = mask("inputs"), LAP = mask("laps"), VOLT = mask("battery"),
 }
 local BACK_ICON = mask("back")
@@ -27,7 +27,7 @@ for _, p in ipairs(settings.PAGES) do TITLES[p.id] = p.title end
 
 -- Menu groups (each starts a new row under its heading).
 local GROUPS = {
-    { title = "Settings", pages = { "BRK", "DRV", "IN", "LAP", "VOLT" } },
+    { title = "Settings", pages = { "BRK", "DRV", "ROCK", "IN", "LAP", "VOLT" } },
     { title = "Diagnostics", pages = { "CHECK" } },
 }
 
@@ -107,7 +107,52 @@ local function judge(a)
     end
 end
 
+-- Rock (the Add line): while the Rock Switch is held, remember the largest
+-- Rock value sent and the largest throttle channel value seen; judge when it
+-- stops. With the line right the channel reaches what Rock sent (the Throttle
+-- Aid Multiply line is at 0, so the trigger adds nothing).
+local function watchRock(now)
+    local rk = check.rock
+    local rock = trackside.rock
+    if rock.active then
+        rk.was = true
+        local lvl = core.out.rock
+        if lvl < 0 then lvl = -lvl end
+        if lvl > rk.maxLevel then rk.maxLevel = lvl end
+        local ch = settings.source("throttleCh")
+        local out = ch and (ch:value() or 0) / 1024 or 0
+        if out < 0 then out = -out end
+        if out > rk.maxOut then rk.maxOut = out end
+    elseif rk.was then
+        rk.was = false
+        if rk.maxLevel >= 0.05 then
+            if rk.maxOut < 0.1 then
+                rk.verdict = "No output: Rock line missing, off or not Add"
+            elseif rk.maxOut > rk.maxLevel * 0.8 and rk.maxOut < rk.maxLevel * 1.2 then
+                rk.verdict = "OK: channel follows Rock"
+            else
+                rk.verdict = string.format("Check weight: channel %s for Rock %s", pct(rk.maxOut), pct(rk.maxLevel))
+            end
+        end
+        rk.maxLevel, rk.maxOut = 0, 0
+    end
+end
+
+local function rockText()
+    local rock = trackside.rock
+    if not settings.get("rockSrc") then return "Off: set a Rock Switch" end
+    local seen = trackside.seen.rock
+    if not seen or os.clock() - seen > SEEN_TIMEOUT then
+        return "Not running: turn on in Model > Lua"
+    end
+    if rock.active then
+        return string.format("Cycle %d, %s %s", rock.cycle, rock.step or "-", pct(core.out.rock))
+    end
+    return "Ready: hold the Rock Switch"
+end
+
 local function sample(a, inp, now)
+    if trackside.rock.active then return end        -- Throttle Aid is at 0 while rocking
     if now - core.testPhaseAt < SETTLE or a.at == core.testPhaseAt then return end
     a.at = core.testPhaseAt
     local ch = settings.source(a.chKey)
@@ -132,6 +177,7 @@ local function buildCheck()
         last = {},
         thr = newAxis("throttleSrc", "throttleCh"),
         str = newAxis("steerSrc", "steerCh"),
+        rock = { was = false, maxLevel = 0, maxOut = 0, verdict = nil },
         at = 0,
     }
     local function staticLine(label)
@@ -157,6 +203,8 @@ local function buildCheck()
     check.strLive = staticLine("Steering")
     check.thrRes = staticLine("Throttle result")
     check.strRes = staticLine("Steering result")
+    check.rockLive = staticLine("Rock")
+    check.rockRes = staticLine("Rock result")
 end
 
 local function aidText(field)
@@ -198,6 +246,7 @@ local function wakeupCheck()
         sample(check.thr, core.input.thr, now)
         sample(check.str, core.input.steer, now)
     end
+    watchRock(now)
     if now - check.at < 0.2 then return end
     check.at = now
     local alive = trackside.aliveAt
@@ -208,6 +257,8 @@ local function wakeupCheck()
     setText(check.strmul, check.strmul, aidText("strmul"))
     liveAxis(check.thr, check.thrLive, check.thrRes, core.input.thr, testing)
     liveAxis(check.str, check.strLive, check.strRes, core.input.steer, testing)
+    setText(check.rockLive, check.rockLive, rockText())
+    setText(check.rockRes, check.rockRes, check.rock.verdict or "Hold the Rock Switch, then release")
 end
 
 ---------------------------------------------------------------- pages

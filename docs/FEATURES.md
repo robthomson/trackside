@@ -10,6 +10,7 @@ Status key: ☐ not started · ◐ scaffolded · ☑ done
 | --- | --- | --- |
 | Drive aids output | Lua sources `Throttle Aid` (`tsDrv`) and `Steer Aid` (`tsStr`), enabled under Model → Lua | ◐ |
 | Mixing | Stick line (Add) + Lua source line (Multiply) per channel; scaling measured exact in the VX10 sim | ☑ |
+| Rock output | Lua source `Rock` (`tsRck`) on an **Add** line after the Throttle Aid line: ±100% pulses while the Rock Switch is held, 0 otherwise (and on any error). Throttle Aid sends ×0 meanwhile, so the trigger adds nothing. A missing Rock source adds 0, so no LS1 needed. Measured in the sim: channel = Rock value exactly, trigger at 20% ignored | ☑ |
 | Fail-safe | Trackside creates a DIY telemetry sensor `Trackside` (appId 0x5E10) and sends 1 every second. Logic switch LS1 (`Trackside > 0`) is the Active condition of both Multiply lines. Measured in the sim: scripts missing → stick 1:1 from boot; script stops → stick 1:1 after ~5 s; Lua error → sources send ×1.0 at once. The sensor and LS1 stay in the model when the scripts are missing | ☑ |
 | Inputs | Throttle Input / Steering Input source pickers (default: VX10 physical `Throttle` / `Steering`), so no feedback loop through the mixer | ☑ |
 | Dashboard | Widget `Trackside` (`tshome`) on any layout; header row only in full screen | ◐ |
@@ -45,6 +46,26 @@ Measured on the channel outputs in the VX10 sim (lib/core.lua):
 
 A letter lights only while its aid changes the output; armed aids show white, OFF ones grey.
 
+### Rock (lib/rock.lua)
+
+Hold the **Rock Switch** (trigger at rest) and the throttle channel pulses forward and reverse to rock a car
+off its roof. The wheels are in the air, so the rocking is motor torque reaction: short hard pulses. With no
+sensor, pulse length and power ramp from Start to Max over **Ramp Cycles** and wrap, so one cycle meets the
+car's natural rock period. **Reverse Style** builds the sequence the ESC needs (F = forward, R = reverse,
+N = Neutral Dwell, T = brake tap): *Direct* F R; *Via neutral* F N R N; *Double tap* F N T N R N.
+Forward is the trigger side that isn't brake (Brake Direction).
+
+Stops when the switch is released, the trigger is pulled past 30%, or after **Hold Limit** seconds
+("Rock limit" + haptic); after a stop the switch must be released first. Can't start until the switch has
+been seen off once since boot, or with the trigger past 15%. Independent of the Aids Switch. R letter in
+the footer while active, and the scope bar shows the pulses.
+
+Measured on the channel in the sim (defaults, Via neutral): cycles 2–6 at 68/76/84/92/100% power, pulses
+170/220–240/280–310 ms for 160/220/280 ms set (one ~20–30 ms update late), neutral ~165 ms for 150, forward
+and reverse mirrored; pulses stopped at the 6 s Hold Limit with "Rock limit"; a 50% trigger pull stopped it
+and the channel went straight back to the stick; with the trigger held at 20% the channel was the Rock value
+alone. ☑
+
 ### ABS detail
 
 - **OFF**: no ABS. **Static**: fixed ABS Frequency and Brake Floor. **Dynamic**: as brake deepens, pulse rate moves toward Dynamic Target and floor eases toward ~60% of Brake Floor at full pull; optional Dynamic Min Delay moves the hold toward its value.
@@ -78,11 +99,18 @@ A letter lights only while its aid changes the output; armed aids show white, OF
 | Drive aids | Corner Delay | OFF, 5–100 ms, 5 | OFF |
 | Drive aids | Steer Limit | OFF, 0–100%, 5 | OFF |
 | Drive aids | Steer Limit Start | 0–100%, 5 | 50% |
+| Rock | Rock Switch | any switch position / logic switch; --- = off | --- |
+| Rock | Reverse Style | Direct / Via neutral / Double tap | Via neutral |
+| Rock | Neutral Dwell | 20–500 ms, 10 | 150 ms |
+| Rock | Pulse Start / Pulse Max | 50–1000 ms, 10 | 100 / 400 ms |
+| Rock | Ramp Cycles | 1–12 | 6 |
+| Rock | Power Start / Power Max | 10–100%, 5 | 60 / 100% |
+| Rock | Hold Limit | 1–15 s | 6 s |
 | Inputs | Throttle Input / Steering Input | any source | VX10 Throttle / Steering |
 | Inputs | Throttle Channel / Steering Channel | any channel (used by Check setup) | CH2 / CH1 |
 | Timer & laps | Timer | 1–45 min | 5 min |
 | Timer & laps | Timer Switch | switch position / logic switch | — |
-| Timer & laps | Show Timer | OFF / ON (footer: timer vs A T S C D) | OFF |
+| Timer & laps | Show Timer | OFF / ON (footer: timer vs A T S C D R) | OFF |
 | Inputs | Brake Direction | Negative / Positive | Negative |
 | Inputs | Graph Direction | Normal / Reversed (scope only) | Normal |
 | Timer & laps | Lap Switch | switch position / logic switch | — |
@@ -105,7 +133,7 @@ Suggested first-session map: ABS Static, 12 Hz, Floor 40%, Pulse 50 ms, Trigger 
 | Header (full screen only) | Model name, LQ (0–100), SNR, TX voltage, TX power mW | ◐ |
 | Battery | Pack voltage + cell count, cell V, battery %, min pack V, state (OFF/NOTEL/OK/LOW/ALARM) | ◐ |
 | Laps | Current lap (CUR), last lap (L1), best (green 3 s after a new best), lap count; reset bar along CUR | ☑ |
-| Footer | A T S C D letters (own colour = working, white = armed, grey = OFF, struck through = Aids Switch off), or session countdown when Show Timer = ON (grey paused, red blinking when expired) | ☑ |
+| Footer | A T S C D R letters (own colour = working, white = armed, grey = OFF, struck through = Aids Switch off), or session countdown when Show Timer = ON (grey paused, red blinking when expired) | ☑ |
 | Battery highlight | PACK value amber on LOW; box flashes red (0.5 s) on ALARM | ☑ |
 | Toolbar | Swipe up (or long PAGE) → bar with Laps (lap view: LAPS / BEST / AVG / TOT + every lap, best green), Start/Pause timer, Reset (asks first), Settings (Trackside tool via `system.openPage` and the tool's handle, Ethos 26.1+). Any button, swipe down, a tap above, RTN or 10 s closes it. Wheel + ENTER work too. Vertical swipes only, so screen swipes still work | ☑ |
 
@@ -151,6 +179,7 @@ decimals = digits spoken). Checked in the sim log (lib/alerts.lua):
 | "Aid test on/off" | Aid Test starts, ends or times out | ☑ |
 | "Drive aids on/off" + buzz | Aids Switch flipped (not at start-up) | ☑ |
 | "Drive aids off. Trackside error." + haptic | a Lua error released the aids | ☑ |
+| "Rock limit" + haptic | Rock stopped by the Hold Limit (a trigger pull stops it with a buzz only) | ☑ |
 | Lap time / "Best lap" + buzz | each lap (Lap Callout, Lap Haptic) | ☑ |
 | "One minute" / "Time up" + haptic | countdown at 1:00 and 0:00 | ☑ |
 | "Laps reset" / "Timer reset" | long hold on the lap / timer switch | ☑ |

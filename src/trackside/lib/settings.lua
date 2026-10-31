@@ -37,6 +37,17 @@ settings.schema = {
     { key = "steerLimit",    tab = "DRV",  label = "Steer Limit",       kind = "num", min = 0,  max = 100, step = 5, unit = "%",  default = OFF, off = true },
     { key = "steerLimitStart",tab = "DRV", label = "Steer Limit Start", kind = "num", min = 0,  max = 100, step = 5, unit = "%",  default = 50 },
 
+    -- ROCK - rock the car off its roof (lib/rock.lua). Rock Switch not set = feature off.
+    { key = "rockSrc",       tab = "ROCK", label = "Rock Switch",       kind = "switch", default = nil },
+    { key = "rockStyle",     tab = "ROCK", label = "Reverse Style",     kind = "choice", choices = { "Direct", "Via neutral", "Double tap" }, default = 2 },
+    { key = "rockDwell",     tab = "ROCK", label = "Neutral Dwell",     kind = "num", min = 20, max = 500,  step = 10, unit = "ms", default = 150 },
+    { key = "rockPulseStart",tab = "ROCK", label = "Pulse Start",       kind = "num", min = 50, max = 1000, step = 10, unit = "ms", default = 100 },
+    { key = "rockPulseMax",  tab = "ROCK", label = "Pulse Max",         kind = "num", min = 50, max = 1000, step = 10, unit = "ms", default = 400 },
+    { key = "rockCycles",    tab = "ROCK", label = "Ramp Cycles",       kind = "num", min = 1,  max = 12,   step = 1,  default = 6 },
+    { key = "rockPowerStart",tab = "ROCK", label = "Power Start",       kind = "num", min = 10, max = 100,  step = 5,  unit = "%",  default = 60 },
+    { key = "rockPowerMax",  tab = "ROCK", label = "Power Max",         kind = "num", min = 10, max = 100,  step = 5,  unit = "%",  default = 100 },
+    { key = "rockLimit",     tab = "ROCK", label = "Hold Limit",        kind = "num", min = 1,  max = 15,   step = 1,  unit = "s",  default = 6 },
+
     -- IN - inputs and the channels the aids drive
     { key = "throttleSrc",   tab = "IN",   label = "Throttle Input",    kind = "source", default = { "ANALOG", 1 } },
     { key = "steerSrc",      tab = "IN",   label = "Steering Input",    kind = "source", default = { "ANALOG", 0 } },
@@ -73,6 +84,7 @@ settings.PAGES = {
     { id = "CHECK", title = "Check setup" },
     { id = "BRK",   title = "Brake / ABS" },
     { id = "DRV",   title = "Drive aids" },
+    { id = "ROCK",  title = "Rock" },
     { id = "IN",    title = "Inputs" },
     { id = "LAP",   title = "Timer & laps" },
     { id = "VOLT",  title = "Battery" },

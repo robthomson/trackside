@@ -76,6 +76,19 @@ def wheel():
     save(img, "drive", 70)
 
 
+def rock():
+    # A car on its roof over a rocker arc with arrowheads at both ends.
+    img, d = canvas(70)
+    d.arc(box(8, 10, 62, 64), 20, 160, fill=0, width=w(4))
+    d.polygon([(w(6), w(44)), (w(16), w(40)), (w(14), w(51))], fill=0)
+    d.polygon([(w(64), w(44)), (w(54), w(40)), (w(56), w(51))], fill=0)
+    d.rounded_rectangle(box(23, 20, 47, 32), radius=w(3), fill=0)
+    d.rounded_rectangle(box(29, 11, 41, 21), radius=w(2), fill=0)
+    for x in (27, 43):
+        d.ellipse(box(x - 4, 5, x + 4, 13), fill=0)
+    save(img, "rock", 70)
+
+
 def inputs():
     img, d = canvas(70)
     for x, knob in ((22, 26), (48, 46)):
@@ -156,6 +169,6 @@ def tb_settings():
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     OUT_WIDGET.mkdir(parents=True, exist_ok=True)
-    for f in (flag, check, brake, wheel, inputs, laps, battery, back, tb_laps, tb_timer, tb_reset, tb_settings):
+    for f in (flag, check, brake, wheel, rock, inputs, laps, battery, back, tb_laps, tb_timer, tb_reset, tb_settings):
         f()
     print(f"Wrote icons to {OUT}")

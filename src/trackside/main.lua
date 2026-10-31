@@ -5,6 +5,8 @@
   Registers:
     - Lua sources "Throttle Aid" and "Steer Aid": multipliers used
       on Multiply mix lines for the throttle and steering channels
+    - Lua source "Rock": forward/reverse pulses on an Add line of the
+      throttle channel, to rock a car off its roof (lib/rock.lua)
     - Telemetry sensor "Trackside" (1 while running): feeds logic switch LS1,
       the Active condition for those lines
     - Widget "Trackside": the race dashboard
@@ -17,7 +19,7 @@ local bootAt = os.clock()
 -- One shared table for every part of the suite (Ethos runs all scripts in one Lua state).
 trackside = trackside or {}
 trackside.BASE = BASE
-trackside.VERSION = "0.1.0"
+trackside.VERSION = "0.2.0"
 -- Build name, stamped by bin/package/build_package.py (e.g. 0.1.0, commit-abc1234).
 trackside.BUILD = "dev"
 
@@ -31,6 +33,7 @@ pcall(collectgarbage, "setpause", 120)
 
 -- Core modules load eagerly: they run all the time (sources, dashboard).
 trackside.settings = load("lib/settings.lua")
+trackside.rock = load("lib/rock.lua")        -- before core: core.update() calls it
 trackside.core = load("lib/core.lua")
 trackside.telemetry = load("lib/telemetry.lua")
 trackside.battery = load("lib/battery.lua")
@@ -86,16 +89,19 @@ end
 -- Safety: an aid may only reduce its channel (0..1). On a Lua error Ethos keeps
 -- the source's last value, which could hold the car mid ABS pulse, so any error
 -- sends x1.0 (stick passes straight through) until the next good update.
-local function aidSource(key, name, field)
+-- The Rock source (an Add line, -1..1) sends 0 on an error and at rest.
+--   lo:   lowest valid value; anything below it (or NaN) sends `safe`
+--   safe: value sent at init and on any error
+local function aidSource(key, name, field, lo, safe)
     local last = nil
     local reported = false
 
     local function step(source)
         local core = trackside.core
         core.update()
-        -- core.ok is false if this or the other source's update call failed
-        local v = core.ok and floor(core.out[field] * MIX_SCALE + 0.5) or MIX_SCALE
-        if not (v >= 0) then v = MIX_SCALE end      -- negative or NaN
+        -- core.ok is false if this or another source's update call failed
+        local v = core.ok and floor(core.out[field] * MIX_SCALE + 0.5) or safe
+        if not (v >= lo) then v = safe end          -- out of range or NaN
         if v > MIX_SCALE then v = MIX_SCALE end
         if v ~= last then
             last = v
@@ -108,8 +114,8 @@ local function aidSource(key, name, field)
         name = name,
         init = function(source)
             source:decimals(0)
-            source:value(MIX_SCALE)
-            last = MIX_SCALE
+            source:value(safe)
+            last = safe
         end,
         wakeup = function(source)
             trackside.seen[field] = os.clock()     -- shown on Check setup
@@ -118,9 +124,9 @@ local function aidSource(key, name, field)
             pcall(trackside.laps.update)
             local ok, err = pcall(step, source)
             if not ok then
-                if last ~= MIX_SCALE then
-                    last = MIX_SCALE
-                    source:value(MIX_SCALE)
+                if last ~= safe then
+                    last = safe
+                    source:value(safe)
                 end
                 if not reported then
                     reported = true
@@ -157,8 +163,9 @@ local toolDef = {
 
 local function init()
     -- Keys are saved in models: never change them.
-    system.registerSource(aidSource("tsDrv", "Throttle Aid", "drive"))
-    system.registerSource(aidSource("tsStr", "Steer Aid", "strmul"))
+    system.registerSource(aidSource("tsDrv", "Throttle Aid", "drive", 0, MIX_SCALE))
+    system.registerSource(aidSource("tsStr", "Steer Aid", "strmul", 0, MIX_SCALE))
+    system.registerSource(aidSource("tsRck", "Rock", "rock", -MIX_SCALE, 0))
     system.registerWidget(load("widget/home.lua"))
     -- The handle lets the dashboard open the tool (system.openPage, Ethos 26.1+).
     trackside.toolHandle = system.registerSystemTool(toolDef)
