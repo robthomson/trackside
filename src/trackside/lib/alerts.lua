@@ -16,12 +16,16 @@
 
   Aids Switch flipped -> "Drive aids on" / "Drive aids off" + a short buzz
   (not at start-up).
+
+  Rock stopping by itself: Hold Limit -> "Rock limit" + haptic; trigger
+  pulled -> a short buzz (lib/rock.lua sets rock.stopped).
 ]]
 
 local settings = trackside.settings
 local battery = trackside.battery
 local fuel = trackside.fuel
 local core = trackside.core
+local rock = trackside.rock
 local audio = trackside.audio
 
 local alerts = { state = "OFF" }
@@ -123,6 +127,16 @@ function alerts.update(now)
     if core.testExpired then
         core.testExpired = false
         audio.say("aidtest_off")
+    end
+    local why = rock.stopped
+    if why then
+        rock.stopped = nil
+        if why == "limit" then
+            audio.say("rock_limit")
+            audio.haptic("- -")
+        else
+            audio.haptic(".")          -- trigger pulled: stopped on purpose
+        end
     end
 end
 

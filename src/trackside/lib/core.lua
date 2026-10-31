@@ -22,7 +22,7 @@ local core = {}
 -- Live state, read by the dashboard.
 core.input = { thr = 0, steer = 0 }          -- raw sticks, -1..1
 core.proc = { thr = 0, steer = 0 }           -- after the aid pipeline, -1..1
-core.out = { drive = 1.0, strmul = 1.0 }     -- multipliers for the mixes
+core.out = { drive = 1.0, strmul = 1.0, rock = 0 }   -- multipliers for the mixes; rock = Add line, -1..1
 core.ok = true                               -- false if the last update() raised an error
 core.aidsOn = true                           -- false while the Aids Switch is off
 
@@ -43,7 +43,11 @@ function core.setTest(on)
     core.testUntil = on and (now + TEST_MAX) or nil
     testStart, core.testMul, core.testPhaseAt = now, TEST_MUL, now
 end
-core.flags = { A = false, T = false, S = false, C = false, D = false }
+core.flags = { A = false, T = false, S = false, C = false, D = false, R = false }
+
+-- Rock (lib/rock.lua) runs after the aids: while active, Throttle Aid sends 0
+-- and the Rock source (an Add line) drives the throttle channel alone.
+local rock = trackside.rock
 
 local STICK_MAX = 1024
 local lastTick = nil
@@ -245,6 +249,14 @@ function core.update()
             core.testExpired = true
         end
     end
+    -- Rock wins over everything above: the driver is holding a switch for it.
+    rock.update(now, thr)
+    core.flags.R = rock.active
+    if rock.active then
+        core.out.drive = 0
+        core.proc.thr = rock.level       -- the scope shows the pulses
+    end
+    core.out.rock = rock.level
     core.ok = true
 end
 

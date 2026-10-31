@@ -168,6 +168,9 @@ def build():
         ["<b>Throttle Aid</b> and <b>Steer Aid</b>", "Lua sources",
          "Each outputs a multiplier for one channel. Your mixes keep the normal stick line and "
          "add one <b>Multiply</b> line with the aid after it."],
+        ["<b>Rock</b> (optional)", "Lua source",
+         "Rocks a car off its roof: while you hold the Rock Switch it pulses the throttle forward and "
+         "reverse. Uses one <b>Add</b> line on the throttle channel (section 4e)."],
         ["<b>Trackside</b>", "Telemetry sensor",
          "Created automatically. Reads 1 while Trackside runs. A logic switch built on it turns the aid "
          "lines off if Trackside stops or is missing."],
@@ -220,6 +223,7 @@ def build():
         "Turn <b>Throttle Aid</b> and <b>Steer Aid</b> ON. Trackside then also creates its <b>Trackside</b> "
         "telemetry sensor, used in section 4c.",
     ]))
+    story.append(p("The <b>Rock</b> source is listed here too. Leave it OFF unless you want Rock (section 4e)."))
     story.append(shot("03-model-menu-lua", "Model menu, page 2: the Lua page", width=105 * mm))
     story.append(pair("04-lua-off", "Both start OFF", "05-lua-on", "Turn both ON"))
     story.append(PageBreak())
@@ -289,9 +293,39 @@ def build():
         ["CH1", "Steer Aid", "Lua > Steer Aid", "Multiply", "LS1"],
         ["CH2", "Throttle", "Analogs > Throttle (the trigger)", "Add", "Always on"],
         ["CH2", "Throttle Aid", "Lua > Throttle Aid", "Multiply", "LS1"],
+        ["CH2", "Rock (optional)", "Lua > Rock", "Add", "Always on"],
     ], [20 * mm, 26 * mm, 60 * mm, 26 * mm, 38 * mm]))
     story.append(p("To reverse a channel, use <b>Model &gt; Channels</b>. The wizard's stick mixes have no reverse "
                    "option, and a reverse on the aid line flips the whole channel."))
+    story.append(PageBreak())
+
+    story.append(p("4e. Rock line (optional)", "h2"))
+    story.append(p("<b>Rock</b> gets a car off its roof. While you hold the Rock Switch, Trackside pulses the "
+                   "throttle forward and reverse. The pulses get longer and stronger with each rock, so one of them "
+                   "matches the way your car rocks. Skip this section if you don't want it."))
+    story.append(box("<b>Reverse must be on in the ESC.</b> Rock can't make an ESC with reverse disabled go backwards: "
+                     "the car will only brake. Try Rock on the bench first, with the car on a stand.", "warn"))
+    story.append(steps([
+        "In <b>Model &gt; Lua</b>, turn <b>Rock</b> ON.",
+        "In <b>Mixes</b>, tap <b>+</b>, choose <b>Free mix</b>, then <b>Add after: Throttle Aid</b> "
+        "(or <b>Last position</b>). Optional: name it <i>Rock</i>.",
+        "Tap <b>Source</b>, scroll to the <b>Lua</b> category and pick <b>Rock</b>.",
+        "Leave <b>Operation</b> on <b>Add</b> and the weight at 100%.",
+        "Scroll down and set <b>Output</b> to <b>CH2 (Throttle)</b>.",
+        "In the Trackside tool, open the <b>Rock</b> page and pick a <b>Rock Switch</b> (section 7).",
+    ]))
+    story.append(pair("35-lua-rock", "Model > Lua: Rock ON",
+                      "36-rock-source", "Source: Lua > Rock"))
+    story.append(pair("37-rock-mix", "Rock line: Operation Add, weight 100%",
+                      "38-rock-output", "Output: CH2 (Throttle)"))
+    story.append(shot("39-mixes-rock", "Finished: the Rock line is the last line on CH2", width=105 * mm))
+    story.append(box("The Rock line needs <b>no</b> safety switch. It adds nothing unless you are holding the Rock "
+                     "Switch, and if the Trackside scripts are missing it adds zero. It must be <b>Add</b>: "
+                     "with Multiply the throttle would always be zero."))
+    story.append(p("<b>Rock result</b> on <b>Check setup</b> (section 5, at the bottom) needs no Aid Test. Hold the Rock Switch for a "
+                   "second or two with the trigger at rest, then let go. It should read <b>OK: channel follows Rock</b>. "
+                   "<b>No output</b> means the Rock line is missing, on the wrong channel, or not Add."))
+    story.append(shot("42-check-rock", "Rock result after holding the Rock Switch", width=105 * mm))
     story.append(PageBreak())
 
     # --- 5 check ---------------------------------------------------------------
@@ -381,6 +415,31 @@ def build():
                    "All aids are OFF by default. ABS above about 10 Hz can't be timed exactly by the radio."))
     story.append(PageBreak())
 
+    story.append(p("Rock", "h2"))
+    story.append(p("Rock is OFF until you pick a <b>Rock Switch</b>. Use a spring-loaded switch or button if you have "
+                   "one. Hold it with the trigger at rest and the car rocks; let go and it stops at once. Pulling the "
+                   "trigger past 30% also stops it, and so does the <b>Hold Limit</b> (\"Rock limit\"). After it stops "
+                   "by itself, let go of the switch before trying again. If the switch is already in the Rock "
+                   "position when the radio starts, flick it off and back first."))
+    story.append(table([
+        ["Setting", "What it does", "Default"],
+        ["Rock Switch", "Hold this switch position to rock. <b>---</b> = Rock off.", "---"],
+        ["Reverse Style", "Match your ESC. <b>Direct</b>: goes straight from forward to reverse (crawler ESCs). "
+         "<b>Via neutral</b>: needs a pause at neutral before reverse (most ESCs). <b>Double tap</b>: needs "
+         "brake, neutral, then reverse.", "Via neutral"],
+        ["Neutral Dwell", "How long each pause at neutral lasts. Raise it if the car only brakes.", "150 ms"],
+        ["Pulse Start, Pulse Max", "Length of each push, from the first rock to the longest.", "100, 400 ms"],
+        ["Power Start, Power Max", "Throttle of each push, from the first rock to the strongest.", "60, 100%"],
+        ["Ramp Cycles", "Rocks it takes to go from Start to Max. Then it starts again from Start.", "6"],
+        ["Hold Limit", "Rock stops by itself after this long, to protect the motor and ESC.", "6 s"],
+    ], [38 * mm, 104 * mm, 28 * mm]))
+    story.append(pair("40-settings-rock", "The Rock page",
+                      "41-dash-rock", "Rocking: R lit, the bar shows each push"))
+    story.append(p("Start with the defaults. If the car only brakes, set Reverse Style to <b>Double tap</b> or raise "
+                   "Neutral Dwell. If it rocks but never goes over, raise Power Max or Pulse Max. If it flips too "
+                   "hard, lower Power Start."))
+    story.append(PageBreak())
+
     story.append(p("Laps and timer", "h2"))
     story.append(p("On the <b>Timer &amp; laps</b> page, set <b>Lap Switch</b> to a button or switch position you can press "
                    "as you cross the line, and <b>Timer Switch</b> to another. Turn <b>Show Timer</b> ON to see the "
@@ -411,10 +470,12 @@ def build():
         ["CELL / BATT / MIN", "Voltage per cell, fuel left (see below), and the lowest pack voltage this session."],
         ["CUR / L1 / BEST / LAP", "Lap timing: current lap, last lap, best lap (green for 3 s after a new best) "
                                   "and lap count."],
-        ["A T S C D", "Drive aid letters: in the aid's own colour while it's working, white when it's armed, grey "
-                      "when it's OFF. Struck through when the Aids Switch has turned the aids off. With Show Timer "
+        ["A T S C D R", "Drive aid letters: in the aid's own colour while it's working, white when it's armed, grey "
+                      "when it's OFF. Struck through when the Aids Switch has turned the aids off. <b>R</b> (Rock) "
+                      "lights pink while rocking, whatever the Aids Switch. With Show Timer "
                       "ON this box shows the countdown instead: grey when paused, red and blinking when it has run out."],
-        ["Live bar", "Throttle (green) or brake (red) from the centre line. The small mark below shows the wheel position."],
+        ["Live bar", "Throttle (green) or brake (red) from the centre line. The small mark below shows the wheel position. "
+                     "While rocking it shows each push: green forward, red reverse."],
     ], [42 * mm, 128 * mm]))
     story.append(p("Telemetry values show <b>--</b> until the receiver sends them."))
     story.append(p("The toolbar", "h2"))
@@ -455,6 +516,8 @@ def build():
         ["4.2 seconds / Best lap, 4.2 seconds + buzz", "Each lap (Lap Callout and Lap Haptic on the Timer & laps page)."],
         ["One minute / Time up + vibration", "The countdown reaches 1:00 and 0:00. After 0:00 it buzzes every 10 s for a minute."],
         ["Drive aids off. Trackside error. + vibration", "A Trackside error released the aids: the car drives on the plain sticks."],
+        ["Short buzz", "Rock starts, or stops because you pulled the trigger."],
+        ["Rock limit + vibration", "Rock stopped by itself at the Hold Limit."],
     ], [62 * mm, 108 * mm])]))
     story.append(p("Alerts use the radio's voice setting (English: default, US or UK). To use your own recording, put a "
                    "WAV with the same name in <b>SCRIPTS/trackside.user/audio</b>."))
@@ -486,6 +549,11 @@ def build():
          "No telemetry yet. Values appear once the receiver is bound and sending telemetry."],
         ["The bar turns red when I accelerate",
          "Change <b>Brake Direction</b> on the tool's Inputs page."],
+        ["Rock does nothing",
+         "Check the <b>Rock result</b> on Check setup (section 5). Rock needs a Rock Switch, the trigger at rest, "
+         "and the switch to have been off once since the radio started."],
+        ["Rock only pushes forward (the car brakes instead of reversing)",
+         "Turn reverse on in the ESC. Then try Reverse Style <b>Double tap</b>, or raise Neutral Dwell."],
     ], [55 * mm, 115 * mm]))
 
     doc = SimpleDocTemplate(str(OUT), pagesize=A4, leftMargin=20 * mm, rightMargin=20 * mm,

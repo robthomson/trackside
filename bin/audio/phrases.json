@@ -6,6 +6,7 @@
   { "file": "aids_off.wav", "text": "Drive aids off. Trackside error." },
   { "file": "aids_enabled.wav", "text": "Drive aids on" },
   { "file": "aids_disabled.wav", "text": "Drive aids off" },
+  { "file": "rock_limit.wav", "text": "Rock limit" },
   { "file": "best_lap.wav", "text": "Best lap" },
   { "file": "laps_reset.wav", "text": "Laps reset" },
   { "file": "timer_reset.wav", "text": "Timer reset" },

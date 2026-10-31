@@ -67,6 +67,7 @@ local function colors()
     C.letter.S = C.warn                       -- steer cut
     C.letter.C = lcd.RGB(200, 110, 255)       -- corner brake
     C.letter.D = lcd.RGB(60, 170, 255)        -- steer limit
+    C.letter.R = lcd.RGB(255, 80, 200)        -- rock
     return changed
 end
 
@@ -284,19 +285,21 @@ local function drawTimer(b)
     lcd.drawText(x + floor((w - tw) / 2), y + floor((h - th) / 2), t)
 end
 
-local LETTERS = { "A", "T", "S", "C", "D" }
+local LETTERS = { "A", "T", "S", "C", "D", "R" }
 
--- An aid is armed when its setting isn't OFF.
+-- An aid is armed when its setting isn't OFF (Rock: when it has a switch).
 local function armed(l)
     if l == "A" then return settings.get("absMode") ~= 1 end
     if l == "T" then return not settings.isOff("traction") end
     if l == "S" then return not settings.isOff("steerCut") end
     if l == "C" then return not (settings.isOff("cornerBrake") and settings.isOff("cornerAbsHz")) end
+    if l == "R" then return settings.get("rockSrc") ~= nil end
     return not settings.isOff("steerLimit")
 end
 
 -- Letter colours: its own colour while working, white when armed,
 -- dark grey when OFF. Aids Switch off: all dark grey, struck through.
+-- Rock doesn't depend on the Aids Switch, so R still lights while rocking.
 local function drawLetters(b)
     local x, y, w, h = b.x, b.y, b.w, b.h
     lcd.color(C.box)
@@ -307,8 +310,10 @@ local function drawLetters(b)
     for i = 1, #LETTERS do
         local l = LETTERS[i]
         local c = C.off
-        if on then
-            if core.flags[l] then c = C.letter[l] elseif armed(l) then c = C.text end
+        if core.flags[l] then
+            c = C.letter[l]
+        elseif on and armed(l) then
+            c = C.text
         end
         lcd.color(c)
         local tw, th = lcd.getTextSize(l)
@@ -429,13 +434,14 @@ end
 local function flagKey()
     local f = core.flags
     local k = (f.A and 1 or 0) + (f.T and 2 or 0) + (f.S and 4 or 0) + (f.C and 8 or 0) + (f.D and 16 or 0)
+        + (f.R and 32 or 0)
     for i = 1, #LETTERS do
-        if armed(LETTERS[i]) then k = k + 32 * 2 ^ (i - 1) end
+        if armed(LETTERS[i]) then k = k + 64 * 2 ^ (i - 1) end
     end
-    if not core.aidsOn then k = k + 1024 end
+    if not core.aidsOn then k = k + 4096 end
     if settings.get("showTimer") == 2 then
         -- footer shows the countdown: redraw on each second, run state and blink
-        k = 4096 + math.ceil(laps.timerLeft or 0) * 8 + (laps.timerRunning and 1 or 0)
+        k = 8192 + math.ceil(laps.timerLeft or 0) * 8 + (laps.timerRunning and 1 or 0)
             + (laps.timerExpired and (2 + floor(os.clock() * 2) % 2 * 4) or 0)
     end
     return k
